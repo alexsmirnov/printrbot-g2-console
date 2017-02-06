@@ -163,7 +163,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
           LOG.severe(s"IO error on output to serial port ${iot.getMessage}")
           disconnect()
       } finally {
-        subscription.request(1)
+        Future(subscription.request(1))
       }
     }
   }
@@ -188,7 +188,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
       }
     }
 
-    def cancel() = ???
+    def cancel() = disconnect()
 
     def next(v: Int) {
       lock.lockInterruptibly()
@@ -202,12 +202,13 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
         lock.unlock()
       }
     }
+    
     def onDisconnect() {
       lock.lockInterruptibly()
       try {
         sub.onComplete()
         requested = 0L
-        hasRequested.signal()
+        hasRequested.signalAll()
       } finally {
         lock.unlock()
       }

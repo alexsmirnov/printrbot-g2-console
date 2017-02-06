@@ -16,7 +16,7 @@ libraryDependencies += "org.json4s" %% "json4s-native" % "3.5.0"
 libraryDependencies += "org.reactivestreams" % "reactive-streams" % "1.0.0.final"
 libraryDependencies += "org.scalatest" % "scalatest_2.11" % "3.0.1" % "test"
 libraryDependencies += "org.mockito" % "mockito-core" % "2.7.1"
-
+libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
 
 scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xcheckinit", "-encoding", "utf8", "-feature")
 
