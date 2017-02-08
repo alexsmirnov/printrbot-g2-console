@@ -5,11 +5,12 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import java.util.concurrent.TimeUnit
 
 object ReactiveOps {
 
   def transform[A, B](pub: Publisher[A], proc: Processor[A, B]): Publisher[B] = { pub.subscribe(proc); proc }
-  
+
   trait SyncPublisher[A] extends Publisher[A] {
 
     private[this] var requested = 0L
@@ -40,7 +41,7 @@ object ReactiveOps {
 
     def sendNext(b: A): Boolean = doSync {
       require(subscriber != null, "Producer has no subscriber")
-      while (requested == 0L && started) hasRequested.await()
+      while (requested == 0L && started) hasRequested.await(10,TimeUnit.SECONDS)
       if (started) {
         subscriber.onNext(b)
         requested -= 1L
@@ -60,14 +61,13 @@ object ReactiveOps {
     def onStop(): Unit
 
     def stopProducer() = doSync {
-        if(started){
-          started = false;
-          requested = 0
-          hasRequested.signalAll()
-          onStop()
-        }
+      if (started) {
+        started = false;
+        requested = 0
+        hasRequested.signalAll()
+        onStop()
       }
-
+    }
 
     private def doSync[T](code: => T): T = {
       lock.lockInterruptibly()
@@ -78,7 +78,7 @@ object ReactiveOps {
       }
     }
   }
-  
+
   trait SubscriberBase[A] extends Subscriber[A] {
     private[this] var subscription: Subscription = null
     private[this] val singleExecutor = Executors.newSingleThreadExecutor()
@@ -95,16 +95,36 @@ object ReactiveOps {
       require(subscription != null, "Subscriber has no subscription")
       Future(subscription.cancel())
     }
+
     /*
     def onNext(a: B) = ???
     def onComplete() = ???
     def onError(t: Throwable) = ???
     */
   }
-  abstract class ProcessorBase[A,B](initialRequest: Long = 1L) extends Processor[A, B] with SyncPublisher[B] with SubscriberBase[A] {
+
+  class Fork[A] extends Processor[A, A] with SubscriberBase[A] {
+
+    var branches: List[BranchPublisher] = Nil
+    class BranchPublisher extends SyncPublisher[A] {
+      def onStart() { request(1L) }
+      def onStop() { cancel() }
+    }
+
+    def subscribe(sub: Subscriber[_ >: A]) {
+      val pub = new BranchPublisher()
+      pub.subscribe(sub)
+      branches = pub +: branches
+    }
+    def onNext(a: A) = { branches.foreach(_.sendNext(a)); request(1L) }
+    def onComplete() = branches.foreach(_.sendComplete())
+    def onError(t: Throwable) = branches.foreach(_.sendError(t))
+  }
+
+  abstract class ProcessorBase[A, B](initialRequest: Long = 1L) extends Processor[A, B] with SyncPublisher[B] with SubscriberBase[A] {
     def onStart() { request(initialRequest) }
     def onStop() { cancel() }
-    
+
     def onComplete() = {
       sendComplete()
     }
@@ -113,20 +133,20 @@ object ReactiveOps {
       sendError(t)
     }
   }
-  
-  class Fold[A, B,C](zero: => C,f: (A,C) => Either[C,B],finish: C => B) extends ProcessorBase[A, B]() {
+
+  class Fold[A, B, C](zero: => C, f: (A, C) => Either[C, B], finish: C => B) extends ProcessorBase[A, B]() {
     private[this] var buffer: Option[C] = None
-    override def onStart() {buffer=None;super.onStart()}
+    override def onStart() { buffer = None; super.onStart() }
     def onNext(a: A) {
-      val acc = buffer.fold(f(a,zero))(f(a,_))
+      val acc = buffer.fold(f(a, zero))(f(a, _))
       acc match {
         case Left(buff) => buffer = Some(buff)
-        case Right(result) => sendNext(result);buffer = None
+        case Right(result) => sendNext(result); buffer = None
       }
       request(1L)
     }
     override def onComplete() = {
-      buffer.foreach{ b => sendNext(finish(b))}
+      buffer.foreach { b => sendNext(finish(b)) }
       sendComplete()
     }
   }
@@ -138,16 +158,30 @@ object ReactiveOps {
       request(1L)
     }
   }
-  
-  class Sync[A](size: Long) extends ProcessorBase[A, A](size) {
+
+  class Listener[A](f: A => Unit) extends SubscriberBase[A] { 
+      override def onSubscribe(s: Subscription) {
+        super.onSubscribe(s)
+        request(Long.MaxValue)
+      }
+      def onNext(a: A) { f(a); request(1L) }
+      def onComplete() {}
+      def onError(t: Throwable) {}
+    }
+  class Sync[A](size: Long) extends ProcessorBase[A, A](size) { self =>
     // Subscriber part
     def onNext(a: A) {
       sendNext(a)
     }
+    val barrier = new Listener[Any]({ _ => self.request(1L)})
   }
-  
+
   def flatMap[A, B](f: A => Traversable[B]) = new FlatMap(f)
-  
-  def collect[A,B](pf: PartialFunction[A,B]) = new FlatMap(pf.lift.andThen(_.toTraversable))
+
+  def map[A, B](f: A => B) = new FlatMap({ a: A => List(f(a)) })
+
+  def collect[A, B](pf: PartialFunction[A, B]) = new FlatMap(pf.lift.andThen(_.toTraversable))
+
+  def listener[A](f: A => Unit) = new Listener[A](f)
   
 }

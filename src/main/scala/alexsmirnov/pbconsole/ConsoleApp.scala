@@ -25,7 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package hello
+package alexsmirnov.pbconsole
 
 import scalafx.application.JFXApp
 import scalafx.application.JFXApp.PrimaryStage
@@ -37,11 +37,11 @@ import scalafx.scene.paint.Color._
 import scalafx.scene.paint._
 import scalafx.scene.text.Text
 
-object ScalaFXHelloWorld extends JFXApp {
+object ConsoleApp extends JFXApp {
 
   stage = new PrimaryStage {
     //    initStyle(StageStyle.Unified)
-    title = "ScalaFX Hello World"
+    title = "Printrbot G2 console"
     scene = new Scene {
       fill = Color.rgb(38, 38, 38)
       content = new HBox {
