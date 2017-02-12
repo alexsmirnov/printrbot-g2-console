@@ -27,49 +27,100 @@
 
 package alexsmirnov.pbconsole
 
+import scalafx.Includes._
 import scalafx.application.JFXApp
 import scalafx.application.JFXApp.PrimaryStage
 import scalafx.geometry.Insets
 import scalafx.scene.Scene
 import scalafx.scene.effect.DropShadow
-import scalafx.scene.layout.HBox
+import scalafx.scene.layout.{ VBox, HBox, BorderPane }
 import scalafx.scene.paint.Color._
 import scalafx.scene.paint._
 import scalafx.scene.text.Text
+import scalafx.scene.Node
+import scalafx.scene.control.{ Button, Slider, ToolBar, Tab, TabPane }
+import scalafx.scene.control.ListView
+import scalafx.scene.control.TextField
+import scalafx.scene.layout.Priority
+import scalafx.stage.StageStyle
+import scalafx.concurrent.ScheduledService
+import java.util.concurrent.atomic.AtomicInteger
+import scalafx.concurrent.Task
+import scalafx.util.Duration
+import scalafx.concurrent.WorkerStateEvent
 
 object ConsoleApp extends JFXApp {
+  
+  val console = new Console()
 
   stage = new PrimaryStage {
-    //    initStyle(StageStyle.Unified)
+    width = 1000
+    height = 700
+    initStyle(StageStyle.Unified)
     title = "Printrbot G2 console"
     scene = new Scene {
       fill = Color.rgb(38, 38, 38)
-      content = new HBox {
-        padding = Insets(50, 80, 50, 80)
-        children = Seq(
-          new Text {
-            text = "Scala"
-            style = "-fx-font: normal bold 100pt sans-serif"
-            fill = new LinearGradient(
-              endX = 0,
-              stops = Stops(Red, DarkRed))
-          },
-          new Text {
-            text = "FX"
-            style = "-fx-font: italic bold 100pt sans-serif"
-            fill = new LinearGradient(
-              endX = 0,
-              stops = Stops(White, DarkGray)
-            )
-            effect = new DropShadow {
-              color = DarkGray
-              radius = 15
-              spread = 0.25
-            }
-          }
-        )
+      stylesheets += this.getClass.getResource("/console.css").toExternalForm
+      root = new BorderPane {
+        top = toolbar
+        center = tabs
+        bottom = status
       }
     }
-
   }
+
+  def toolbar: Node = {
+    new VBox {
+      vgrow = Priority.Always
+      hgrow = Priority.Always
+      children = new ToolBar {
+        content = List(
+          new Button {
+            text = "Button 1"
+          }, new Button {
+            text = "Button 2"
+          }, new Slider {
+
+          })
+      }
+    }
+  }
+
+  def tabs: Node = {
+    new TabPane {
+      vgrow = Priority.Always
+      hgrow = Priority.Always
+      tabs = Seq(
+        new Tab {
+          text = "Print"
+          closable = false
+          //                content = printPage
+        },
+        new Tab {
+          text = "Printer control"
+          closable = false
+        },
+        new Tab {
+          hgrow = Priority.Always
+          text = "Console"
+          closable = false
+          content = console.node
+        })
+    }
+  }
+  def status: Node = {
+    new HBox {
+      hgrow = Priority.Always
+      children = new Text {
+        text = "Status"
+      }
+    }
+  }
+  
+  console.setListener(console.onOutput(_))
+  val counter = new AtomicInteger()
+  val scheduler = ScheduledService(Task{"{r:${counter.incrementAndGet} }"})
+  scheduler.period = Duration(10000.0)
+  scheduler.onSucceeded = {ev: WorkerStateEvent => console.onInput(scheduler.lastValue())}
+  scheduler.start()
 }
