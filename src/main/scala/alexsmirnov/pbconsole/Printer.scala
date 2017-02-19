@@ -7,12 +7,12 @@ import alexsmirnov.pbconsole.serial.Port
  * @author asmirnov
  *
  */
-class Printer(portName: String) {
-  val port = Port(portName.r)
+class Printer(port: Port) {
   
   def start() {
     port.run()
   }
+  
   def stop() {
     port.close()
   }

@@ -6,12 +6,15 @@ import java.util.concurrent.Executors
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.Executors.FinalizableDelegatedExecutorService
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.LinkedBlockingQueue
 
 object ReactiveOps {
 
   def transform[A, B](pub: Publisher[A], proc: Processor[A, B]): Publisher[B] = { pub.subscribe(proc); proc }
 
-  trait SyncPublisher[A] extends Publisher[A] {
+  trait SyncPublisher[A] extends Publisher[A] { self =>
 
     private[this] var requested = 0L
     private[this] var started = true
@@ -21,16 +24,7 @@ object ReactiveOps {
     private[this] var subscriber: Subscriber[_ >: A] = null
     class SubscriptionImpl extends Subscription {
       def cancel() = stopProducer()
-      def request(n: Long) = doSync {
-        if (!started) {
-          requested = n
-          started = true
-          onStart()
-        } else {
-          requested += n
-          hasRequested.signalAll()
-        }
-      }
+      def request(n: Long) = requestProducer(n)
     }
 
     def subscribe(sub: Subscriber[_ >: A]) = {
@@ -41,7 +35,7 @@ object ReactiveOps {
 
     def sendNext(b: A): Boolean = doSync {
       require(subscriber != null, "Producer has no subscriber")
-      while (requested == 0L && started) hasRequested.await(10,TimeUnit.SECONDS)
+      while (requested <= 0L && started) hasRequested.await(10, TimeUnit.SECONDS)
       if (started) {
         subscriber.onNext(b)
         requested -= 1L
@@ -58,7 +52,19 @@ object ReactiveOps {
     }
 
     def onStart(): Unit
+
     def onStop(): Unit
+
+    def requestProducer(n: Long) = doSync {
+      if (!started) {
+        requested = n
+        started = true
+        onStart()
+      } else {
+        requested += n
+        hasRequested.signalAll()
+      }
+    }
 
     def stopProducer() = doSync {
       if (started) {
@@ -133,6 +139,27 @@ object ReactiveOps {
       sendError(t)
     }
   }
+  
+  class AsyncProcessor[A](queueSize: Int=100) extends Processor[A, A] with SyncPublisher[A] with SubscriberBase[A] {
+    
+    private[this] val executor = Executors.unconfigurableExecutorService(
+            new ThreadPoolExecutor(1, 1,
+                                    0L, TimeUnit.MILLISECONDS,
+                                    new LinkedBlockingQueue[Runnable](queueSize+1)))
+    
+    def onStart() { request(queueSize) }
+    def onStop() { cancel() }
+    def onNext(a: A) {
+      executor.submit(new Runnable{def run(){sendNext(a);request(1L)}})
+    }
+    def onComplete() = {
+      executor.submit(new Runnable{def run(){sendComplete()}})
+    }
+    def onError(t: Throwable) {
+      stopProducer()
+      sendError(t)
+    }
+  }
 
   class Fold[A, B, C](zero: => C, f: (A, C) => Either[C, B], finish: C => B) extends ProcessorBase[A, B]() {
     private[this] var buffer: Option[C] = None
@@ -159,22 +186,27 @@ object ReactiveOps {
     }
   }
 
-  class Listener[A](f: A => Unit) extends SubscriberBase[A] { 
-      override def onSubscribe(s: Subscription) {
-        super.onSubscribe(s)
-        request(Long.MaxValue)
-      }
-      def onNext(a: A) { f(a); request(1L) }
-      def onComplete() {}
-      def onError(t: Throwable) {}
+  class Listener[A](f: A => Unit) extends SubscriberBase[A] {
+    override def onSubscribe(s: Subscription) {
+      super.onSubscribe(s)
+      request(Long.MaxValue)
     }
+    def onNext(a: A) { f(a); request(1L) }
+    def onComplete() {}
+    def onError(t: Throwable) {}
+  }
+
   class Sync[A](size: Long) extends ProcessorBase[A, A](size) { self =>
     // Subscriber part
     def onNext(a: A) {
       sendNext(a)
     }
-    val barrier = new Listener[Any]({ _ => self.request(1L)})
+    val barrier = new Listener[Any]({ _ => self.request(1L) })
   }
+
+  def async[A](queueSize: Int = 100) = new AsyncProcessor[A](queueSize)
+  
+  def fold[A, B, C](zero: => C, f: (A, C) => Either[C, B], finish: C => B) = new Fold(zero, f, finish)
 
   def flatMap[A, B](f: A => Traversable[B]) = new FlatMap(f)
 
@@ -183,5 +215,5 @@ object ReactiveOps {
   def collect[A, B](pf: PartialFunction[A, B]) = new FlatMap(pf.lift.andThen(_.toTraversable))
 
   def listener[A](f: A => Unit) = new Listener[A](f)
-  
+
 }
