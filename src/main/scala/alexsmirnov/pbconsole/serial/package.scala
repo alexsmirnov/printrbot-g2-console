@@ -15,5 +15,5 @@ package object serial {
     },
     { sb => sb.result() })
 
-  def linesToBytes = flatMap[String, Byte](_.getBytes.toSeq)
+  def linesToBytes = flatMap[String, Byte](_.getBytes.toSeq :+ ('\n'.toByte))
 }

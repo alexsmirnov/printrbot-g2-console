@@ -24,6 +24,11 @@ object Console {
     override def toString() = "> " + msg
   }
 }
+/**
+ * TODO: disable send if disconnected.
+ * @author asmirnov
+ *
+ */
 class Console {
   
   val buffer = ObservableBuffer.empty[Console.Msg]

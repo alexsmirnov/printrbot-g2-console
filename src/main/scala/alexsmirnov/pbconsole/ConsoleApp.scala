@@ -48,10 +48,43 @@ import java.util.concurrent.atomic.AtomicInteger
 import scalafx.concurrent.Task
 import scalafx.util.Duration
 import scalafx.concurrent.WorkerStateEvent
+import scalafx.beans.property.{ BooleanProperty, StringProperty, IntegerProperty }
+import alexsmirnov.pbconsole.serial.Port
+import scalafx.application.Platform
 
+/**
+ * TODO: reconnect button, status from {sr:...}, movement control
+ * @author asmirnov
+ *
+ */
 object ConsoleApp extends JFXApp {
-  
+
   val console = new Console()
+
+  val printer = Printer(parameters.named)
+
+  console.setListener(printer.sendLine)
+
+  printer.addReceiveListener{ l => Platform.runLater{console.onInput(l)} }
+  printer.addSendListener{ l => Platform.runLater{console.onOutput(l)} }
+  
+  val connected = BooleanProperty(false)
+
+  val portName = StringProperty("")
+
+  val statusText = StringProperty("Disconnected")
+
+  val connectedSpeed = IntegerProperty(0)
+
+  printer.addStateListener { st =>
+    Platform.runLater {
+      st match {
+        case Port.Connected(name, spd) =>
+          connected() = true; portName() = name; connectedSpeed() = spd ; statusText() = s"Connected to $name at $spd"
+        case Port.Disconnected => connected() = false; portName() = ""; connectedSpeed() = 0 ; statusText() = "Disconnected"
+      }
+    }
+  }
 
   stage = new PrimaryStage {
     width = 1000
@@ -108,19 +141,24 @@ object ConsoleApp extends JFXApp {
         })
     }
   }
+  
   def status: Node = {
     new HBox {
       hgrow = Priority.Always
       children = new Text {
-        text = "Status"
+        text <== statusText
       }
     }
   }
-  
-  console.setListener(console.onOutput(_))
+
+  override def stopApp() {
+    printer.stop()
+  }
+
   val counter = new AtomicInteger()
-  val scheduler = ScheduledService(Task{"{r:${counter.incrementAndGet} }"})
+  val scheduler = ScheduledService(Task { "{r:${counter.incrementAndGet} }" })
   scheduler.period = Duration(10000.0)
-  scheduler.onSucceeded = {ev: WorkerStateEvent => console.onInput(scheduler.lastValue())}
-  scheduler.start()
+  scheduler.onSucceeded = { ev: WorkerStateEvent => console.onInput(scheduler.lastValue()) }
+  //  scheduler.start()
+  printer.start()
 }

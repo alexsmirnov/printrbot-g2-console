@@ -8,9 +8,12 @@ class PortStub extends Port {
  
     val receiver = toLines
     val processor = map[String,String]{ line =>
+      Thread.sleep(1)
       """{"r":{"foo":"bar"},"f":[1,0,8]}"""
     }
-    val responser = transform(transform(transform(receiver, processor),linesToBytes),async[Byte]())
+    val asyncReceiver = transform(receiver, async[String]())
+    val responser = linesToBytes
+    transform(asyncReceiver,processor).subscribe(responser)
     
     var listeners:List[Port.StateEvent => Unit] = Nil
 
@@ -24,13 +27,14 @@ class PortStub extends Port {
         val ev = Port.Connected("foo",0)
         listeners.foreach(_(ev))
         receiver.request(100L)
+        responser.request(100L)
+        responser.requestProducer(100)
         processor.sendNext("""{"r":{"sr":{"state":"READY"}},"f":[1,0,8]}""")
       }
-    }, 10, TimeUnit.SECONDS)
+    }, 10, TimeUnit.MILLISECONDS)
   }
 
   def close(): Unit = {
-    ???
   }
 
   def onComplete(): Unit = {

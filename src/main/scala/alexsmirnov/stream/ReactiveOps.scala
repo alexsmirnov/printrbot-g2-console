@@ -17,11 +17,16 @@ object ReactiveOps {
   trait SyncPublisher[A] extends Publisher[A] { self =>
 
     private[this] var requested = 0L
-    private[this] var started = true
+    private[this] var started = false
     private[this] val lock = new ReentrantLock(true)
     private[this] val hasRequested = lock.newCondition()
     // Publisher part
     private[this] var subscriber: Subscriber[_ >: A] = null
+    
+    def getRequested = requested
+    
+    def isStarted = started
+
     class SubscriptionImpl extends Subscription {
       def cancel() = stopProducer()
       def request(n: Long) = requestProducer(n)
@@ -85,6 +90,13 @@ object ReactiveOps {
     }
   }
 
+  class SimplePublisher[A] extends SyncPublisher[A] {
+    
+    def onStart() {}
+
+    def onStop() {}
+  }
+  
   trait SubscriberBase[A] extends Subscriber[A] {
     private[this] var subscription: Subscription = null
     private[this] val singleExecutor = Executors.newSingleThreadExecutor()
@@ -109,12 +121,12 @@ object ReactiveOps {
     */
   }
 
-  class Fork[A] extends Processor[A, A] with SubscriberBase[A] {
+  class Fork[A] extends Processor[A, A] with SubscriberBase[A] { self =>
 
     var branches: List[BranchPublisher] = Nil
     class BranchPublisher extends SyncPublisher[A] {
-      def onStart() { request(1L) }
-      def onStop() { cancel() }
+      def onStart() { self.request(1L) }
+      def onStop() { self.cancel() }
     }
 
     def subscribe(sub: Subscriber[_ >: A]) {
@@ -139,21 +151,21 @@ object ReactiveOps {
       sendError(t)
     }
   }
-  
-  class AsyncProcessor[A](queueSize: Int=100) extends Processor[A, A] with SyncPublisher[A] with SubscriberBase[A] {
-    
+
+  class AsyncProcessor[A](queueSize: Int = 100) extends Processor[A, A] with SyncPublisher[A] with SubscriberBase[A] {
+
     private[this] val executor = Executors.unconfigurableExecutorService(
-            new ThreadPoolExecutor(1, 1,
-                                    0L, TimeUnit.MILLISECONDS,
-                                    new LinkedBlockingQueue[Runnable](queueSize+1)))
-    
+      new ThreadPoolExecutor(1, 1,
+        0L, TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue[Runnable](queueSize + 1)))
+
     def onStart() { request(queueSize) }
     def onStop() { cancel() }
     def onNext(a: A) {
-      executor.submit(new Runnable{def run(){sendNext(a);request(1L)}})
+      executor.submit(new Runnable { def run() { sendNext(a); request(1L) } })
     }
     def onComplete() = {
-      executor.submit(new Runnable{def run(){sendComplete()}})
+      executor.submit(new Runnable { def run() { sendComplete() } })
     }
     def onError(t: Throwable) {
       stopProducer()
@@ -203,9 +215,25 @@ object ReactiveOps {
     }
     val barrier = new Listener[Any]({ _ => self.request(1L) })
   }
+  
+  class Merge[A] extends SyncPublisher[A] { self =>
+      private[this] var branches: List[BranchSubscriber] = Nil
+      class BranchSubscriber extends SubscriberBase[A] {
+        def onNext(a: A) { self.sendNext(a); request(1L) }
+        def onComplete() {self.sendComplete()}
+        def onError(t: Throwable) {self.sendError(t)}
+      }
+      def addPublisher(p: Publisher[A]) {
+        val sub = new BranchSubscriber
+        p.subscribe(sub)
+        branches = sub +: branches
+      }
+      override def onStart() = branches.foreach{_.request(1)}
+      override def onStop() = branches.foreach{_.cancel() }
+    } 
 
   def async[A](queueSize: Int = 100) = new AsyncProcessor[A](queueSize)
-  
+
   def fold[A, B, C](zero: => C, f: (A, C) => Either[C, B], finish: C => B) = new Fold(zero, f, finish)
 
   def flatMap[A, B](f: A => Traversable[B]) = new FlatMap(f)
@@ -216,4 +244,9 @@ object ReactiveOps {
 
   def listener[A](f: A => Unit) = new Listener[A](f)
 
+  def merge[A](p: Publisher[A] *): Publisher[A] = {
+    val result = new Merge[A]
+    p.foreach(result.addPublisher(_))
+    result
+  }
 }

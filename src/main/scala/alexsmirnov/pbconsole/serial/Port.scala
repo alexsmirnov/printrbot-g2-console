@@ -23,6 +23,10 @@ import java.util.concurrent.locks.LockSupport
 import gnu.io.SerialPortEventListener
 import gnu.io.SerialPortEvent
 
+/**
+ * @author asmirnov
+ *
+ */
 object Port {
   val LOG = Logger.getLogger("alexsmirnov.pbconsole.serial.Port")
   val scheduler =
@@ -41,6 +45,17 @@ object Port {
   def apply(port: Regex, baud: Int = 115200): Port = new NRJavaSerialPort(port, baud)
 }
 
+/**
+ * TODO: fatal error on disconnect
+ * INFO: Disconnect  Some(gnu.io.NRSerialPort@511eed62)
+ * get_java_var: invalid file descriptor
+ * #
+ * # A fatal error has been detected by the Java Runtime Environment:
+ * Problematic frame:
+ * # C  [libNRJavaSerial.jnilib+0x5b08]  read_byte_array+0x58
+ * @author asmirnov
+ *
+ */
 class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
   import Port._
   val listeners = m.Buffer[(Port.StateEvent => Unit)]()
@@ -100,6 +115,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
   }
 
   def disconnect(reconnect: Boolean = true) {
+    // TODO - stop read thread before disconnect
     LOG.info(s"Disconnect  $connection")
     mutex.synchronized {
       connection.foreach { p =>
@@ -167,8 +183,8 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
       }
     }
   }
-  def onComplete() = ???
-  def onError(t: Throwable) = ???
+  def onComplete() = {}
+  def onError(t: Throwable) = {}
   // Publisher methods
 
   class ReceiverSubscription(sub: Subscriber[Byte]) extends Subscription {
@@ -182,7 +198,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
       lock.lockInterruptibly()
       try {
         requested += n
-        hasRequested.signal()
+        hasRequested.signalAll()
       } finally {
         lock.unlock()
       }
@@ -193,7 +209,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
     def next(v: Int) {
       lock.lockInterruptibly()
       try {
-        while (requested == 0 && connection.isDefined) hasRequested.await()
+        while (requested <= 0 && connection.isDefined) hasRequested.await()
         if (connection.isDefined) {
           sub.onNext(v.toByte)
           requested -= 1L
