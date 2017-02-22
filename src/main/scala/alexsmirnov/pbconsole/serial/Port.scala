@@ -105,7 +105,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
         connection = Some(sr)
         val event = Connected(sr.getSerialPortInstance.getName, sr.getBaud)
         listeners.foreach { _(event) }
-        subscription.request(1L)
+        subscription.request(sr.getSerialPortInstance.getOutputBufferSize)
         startReceiver(sr, subscriber)
       } else {
         LOG.severe("failed to connect serial port")
