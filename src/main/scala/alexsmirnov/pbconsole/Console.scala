@@ -14,8 +14,10 @@ import scalafx.collections.ObservableBuffer
 import scalafx.event.ActionEvent
 import scalafx.beans.property.BooleanProperty
 import scalafx.application.Platform
+import scalafx.beans.binding.StringBinding
 
 object Console {
+
   sealed trait Msg {
     def msg: String
   }
@@ -50,14 +52,16 @@ class Console { console =>
           selectionModel().selectionMode = SelectionMode.Single
           cellFactory_= { v =>
             new ListCell[Console.Msg] {
-              val input = Bindings.createBooleanBinding({ () =>
-                item() match {
-                  case null => false
-                  case Console.In(_) => true
-                  case Console.Out(_) => false
-                }
-              }, item)
-              val message = Bindings.createStringBinding({ () => Option(item()).map(_.msg).getOrElse("") }, item)
+              val input = item map {
+                case null => false
+                case Console.In(_) => true
+                case Console.Out(_) => false
+              }
+
+              val message = item.map[String, StringBinding] {
+                case null => null
+                case m => m.msg
+              }
               wrapText = false
               text <== message
               textFill <== when(input) choose Color.Green otherwise Color.Black
@@ -88,7 +92,11 @@ class Console { console =>
     }
   }
 
-  def addInput(line: String) = buffer += Console.In(line)
+  val statusReport = """\{(sr\:|"sr"\:)""".r
+
+  def addInput(line: String) = if (statusReport.findFirstIn(line).isEmpty) {
+    buffer += Console.In(line)
+  }
 
   def addOutput(line: String) = buffer += Console.Out(line)
 
@@ -97,8 +105,8 @@ class Console { console =>
   def bind(printer: PrinterModel) {
     enabled <== printer.connected
     onAction(printer.sendLine)
-    printer.addReceiveListener ( addInput )
-    printer.addSendListener ( addOutput ) 
+    printer.addReceiveListener(addInput)
+    printer.addSendListener(addOutput)
   }
 }
 
