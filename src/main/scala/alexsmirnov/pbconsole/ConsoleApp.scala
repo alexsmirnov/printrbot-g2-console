@@ -65,7 +65,7 @@ object ConsoleApp extends JFXApp {
 
   
   val printerModel = new PrinterModel(printer)
-  console.enabled <== printerModel.connected
+  console.bind(printerModel)
 
   stage = new PrimaryStage {
     width = 1000

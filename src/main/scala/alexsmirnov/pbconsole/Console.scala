@@ -32,11 +32,11 @@ object Console {
  *
  */
 class Console { console =>
-  
+
   val buffer = ObservableBuffer.empty[Console.Msg]
   var listener: Option[(String => Unit)] = None
   val enabled = BooleanProperty(false)
-  
+
   val node: Node = {
     new VBox {
       vgrow = Priority.Always
@@ -57,12 +57,12 @@ class Console { console =>
                   case Console.Out(_) => false
                 }
               }, item)
-              val message = Bindings.createStringBinding({()=>Option(item()).map(_.msg).getOrElse("")}, item)
+              val message = Bindings.createStringBinding({ () => Option(item()).map(_.msg).getOrElse("") }, item)
               wrapText = false
               text <== message
               textFill <== when(input) choose Color.Green otherwise Color.Black
             }
-            
+
           }
         },
         new HBox {
@@ -71,35 +71,34 @@ class Console { console =>
             listener.foreach(_(input.text()))
             input.clear()
             input.requestFocus()
-            }
+          }
           val input = new TextField {
-              hgrow = Priority.Always
-              onAction = {ae:ActionEvent => send }
-              enabled <== console.enabled
-            }
+            hgrow = Priority.Always
+            onAction = { ae: ActionEvent => send }
+            disable <== console.enabled.not
+          }
           children = List(
             input,
             new Button {
               text = "Send"
-              onAction = {ae:ActionEvent => send }
-              enabled <== console.enabled
+              onAction = { ae: ActionEvent => send }
+              disable <== console.enabled.not
             })
         })
     }
   }
-  
+
   def addInput(line: String) = buffer += Console.In(line)
-  
+
   def addOutput(line: String) = buffer += Console.Out(line)
 
-  def onAction(f: String => Unit) = listener = Some(f)
-  
-  def bind(printer: Printer)  {
-  console.onAction(printer.sendLine)
+  def onAction(f: String => Unit) { listener = Some(f) }
 
-  printer.addReceiveListener{ l => Platform.runLater{console.addInput(l)} }
-  printer.addSendListener{ l => Platform.runLater{console.addOutput(l)} }
-    
+  def bind(printer: PrinterModel) {
+    enabled <== printer.connected
+    onAction(printer.sendLine)
+    printer.addReceiveListener ( addInput )
+    printer.addSendListener ( addOutput ) 
   }
 }
 

@@ -9,8 +9,20 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.Executors.FinalizableDelegatedExecutorService
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.atomic.AtomicInteger
 
 object ReactiveOps {
+  
+  val streamsThreadFactory = new ThreadFactory {
+        val count = new AtomicInteger
+        def newThread(r: Runnable) = {
+          val t = new Thread(r)
+          t.setName("Stream-"+count.incrementAndGet())
+          t.setDaemon(true)
+          t
+        }
+  }
 
   def transform[A, B](pub: Publisher[A], proc: Processor[A, B]): Publisher[B] = { pub.subscribe(proc); proc }
 
@@ -99,7 +111,7 @@ object ReactiveOps {
   
   trait SubscriberBase[A] extends Subscriber[A] {
     private[this] var subscription: Subscription = null
-    private[this] val singleExecutor = Executors.newSingleThreadExecutor()
+    private[this] val singleExecutor = Executors.newSingleThreadExecutor(streamsThreadFactory)
     private implicit val execContext = ExecutionContext.fromExecutorService(singleExecutor)
     def onSubscribe(s: Subscription) = {
       require(subscription == null, "Subscriber already has subscription")
@@ -157,7 +169,8 @@ object ReactiveOps {
     private[this] val executor = Executors.unconfigurableExecutorService(
       new ThreadPoolExecutor(1, 1,
         0L, TimeUnit.MILLISECONDS,
-        new LinkedBlockingQueue[Runnable](queueSize + 1)))
+        new LinkedBlockingQueue[Runnable](queueSize + 1),
+        streamsThreadFactory))
 
     def onStart() { request(queueSize) }
     def onStop() { cancel() }

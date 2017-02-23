@@ -22,6 +22,7 @@ import java.util.concurrent.locks.ReentrantLock
 import java.util.concurrent.locks.LockSupport
 import gnu.io.SerialPortEventListener
 import gnu.io.SerialPortEvent
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * @author asmirnov
@@ -29,15 +30,17 @@ import gnu.io.SerialPortEvent
  */
 object Port {
   val LOG = Logger.getLogger("alexsmirnov.pbconsole.serial.Port")
-  val scheduler =
-    Executors.newScheduledThreadPool(10,
-      new ThreadFactory {
+  def threadFactory(name: String,daemon: Boolean=true) = new ThreadFactory {
+        val count = new AtomicInteger
         def newThread(r: Runnable) = {
           val t = new Thread(r)
-          t.setDaemon(true)
+          t.setName(name+count.incrementAndGet())
+          t.setDaemon(daemon)
           t
         }
-      })
+  }
+  val scheduler =
+    Executors.newScheduledThreadPool(10,threadFactory("scheduler-",true))
   implicit val executor = ExecutionContext.fromExecutorService(scheduler)
   sealed trait StateEvent
   case class Connected(name: String, baud: Int) extends StateEvent
@@ -63,11 +66,11 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
   def addStateListener(listener: Port.StateEvent => Unit) = listeners += listener
 
   @volatile
-  private[this] var connection: Option[NRSerialPort] = None
+  private[this] var connection: Option[(NRSerialPort,Thread)] = None
 
   def run() {
     require(null != subscription, "Subscription required to run serial port")
-    require(null != subscriber, "Subscriber required to run serial port")
+    require(null != inputSubscribtion, "Subscriber required to run serial port")
     waitForConnect
   }
   def close() = {
@@ -102,11 +105,12 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
       if (sr.connect()) {
         LOG.info(s"Connected to $sr")
         sr.notifyOnDataAvailable(true)
-        connection = Some(sr)
         val event = Connected(sr.getSerialPortInstance.getName, sr.getBaud)
         listeners.foreach { _(event) }
-        subscription.request(sr.getSerialPortInstance.getOutputBufferSize)
-        startReceiver(sr, subscriber)
+        val buffSize = sr.getSerialPortInstance.getOutputBufferSize
+        subscription.request(if(buffSize > 0) buffSize else 1024)
+        val inThread = startReceiver(sr, inputSubscribtion)
+        connection = Some((sr,inThread))
       } else {
         LOG.severe("failed to connect serial port")
         waitForConnect
@@ -118,18 +122,19 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
     // TODO - stop read thread before disconnect
     LOG.info(s"Disconnect  $connection")
     mutex.synchronized {
-      connection.foreach { p =>
+      connection.foreach { case(p,t) =>
         connection = None
-        subscriber.onDisconnect
+        if(Thread.currentThread() != t) t.interrupt()
+        inputSubscribtion.onDisconnect
         subscription.cancel()
-        p.disconnect()
         listeners.foreach { _(Disconnected) }
+        p.disconnect()
         if (reconnect) waitForConnect
       }
     }
   }
 
-  def startReceiver(sr: NRSerialPort, sub: ReceiverSubscription) {
+  def startReceiver(sr: NRSerialPort, sub: ReceiverSubscription) = {
     val t = new Thread(new Runnable {
       def run() {
         try {
@@ -146,7 +151,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
           case ex: Exception => LOG.warning(s"Exception in receiver thread ${ex.getMessage}")
         } finally {
           LOG.info(s"Receiver thread finished")
-          disconnect()
+          if(connection.isDefined) disconnect()
         }
       }
     })
@@ -161,6 +166,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
       }
     })
     t.start()
+    t
   }
   // Subscriber methods
   private[this] var subscription: Subscription = null
@@ -171,7 +177,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
   }
 
   def onNext(t: Byte) = {
-    connection.foreach { c =>
+    connection.foreach { case(c,_) =>
       try {
         c.getOutputStream.write(t)
       } catch {
@@ -192,7 +198,6 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
     val lock = new ReentrantLock(true)
     val hasRequested = lock.newCondition()
 
-    sub.onSubscribe(this)
 
     def request(n: Long) = {
       lock.lockInterruptibly()
@@ -204,7 +209,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
       }
     }
 
-    def cancel() = disconnect()
+    def cancel() = disconnect(true)
 
     def next(v: Int) {
       lock.lockInterruptibly()
@@ -223,7 +228,6 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
       lock.lockInterruptibly()
       try {
         sub.onComplete()
-        requested = 0L
         hasRequested.signalAll()
       } finally {
         lock.unlock()
@@ -231,11 +235,12 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
     }
   }
 
-  private[this] var subscriber: ReceiverSubscription = null
+  private[this] var inputSubscribtion: ReceiverSubscription = null
 
   def subscribe(s: Subscriber[_ >: Byte]) = {
-    require(null == subscriber, "Only one subscriber supported by serial port")
-    subscriber = new ReceiverSubscription(s.asInstanceOf[Subscriber[Byte]])
+    require(null == inputSubscribtion, "Only one subscriber supported by serial port")
+    inputSubscribtion = new ReceiverSubscription(s.asInstanceOf[Subscriber[Byte]])
+    s.onSubscribe(inputSubscribtion)
   }
 }
 /**
