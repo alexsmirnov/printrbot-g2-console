@@ -3,6 +3,8 @@ package alexsmirnov.pbconsole
 import alexsmirnov.stream.ReactiveOps._
 
 package object serial {
+  
+  val NL = '\n'.toByte
 
   def toLines = fold[Byte, String, StringBuilder](
     StringBuilder.newBuilder,
@@ -15,5 +17,5 @@ package object serial {
     },
     { sb => sb.result() })
 
-  def linesToBytes = flatMap[String, Byte](_.getBytes.toSeq :+ ('\n'.toByte))
+  def linesToBytes = flatMap[String, Byte](_.getBytes.toSeq :+ NL)
 }

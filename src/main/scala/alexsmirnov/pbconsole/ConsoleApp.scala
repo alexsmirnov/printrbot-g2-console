@@ -63,28 +63,9 @@ object ConsoleApp extends JFXApp {
 
   val printer = Printer(parameters.named)
 
-  console.setListener(printer.sendLine)
-
-  printer.addReceiveListener{ l => Platform.runLater{console.onInput(l)} }
-  printer.addSendListener{ l => Platform.runLater{console.onOutput(l)} }
   
-  val connected = BooleanProperty(false)
-
-  val portName = StringProperty("")
-
-  val statusText = StringProperty("Disconnected")
-
-  val connectedSpeed = IntegerProperty(0)
-
-  printer.addStateListener { st =>
-    Platform.runLater {
-      st match {
-        case Port.Connected(name, spd) =>
-          connected() = true; portName() = name; connectedSpeed() = spd ; statusText() = s"Connected to $name at $spd"
-        case Port.Disconnected => connected() = false; portName() = ""; connectedSpeed() = 0 ; statusText() = "Disconnected"
-      }
-    }
-  }
+  val printerModel = new PrinterModel(printer)
+  console.enabled <== printerModel.connected
 
   stage = new PrimaryStage {
     width = 1000
@@ -146,7 +127,7 @@ object ConsoleApp extends JFXApp {
     new HBox {
       hgrow = Priority.Always
       children = new Text {
-        text <== statusText
+        text <== printerModel.status
       }
     }
   }
@@ -158,7 +139,7 @@ object ConsoleApp extends JFXApp {
   val counter = new AtomicInteger()
   val scheduler = ScheduledService(Task { "{r:${counter.incrementAndGet} }" })
   scheduler.period = Duration(10000.0)
-  scheduler.onSucceeded = { ev: WorkerStateEvent => console.onInput(scheduler.lastValue()) }
+  scheduler.onSucceeded = { ev: WorkerStateEvent => console.addInput(scheduler.lastValue()) }
   //  scheduler.start()
   printer.start()
 }

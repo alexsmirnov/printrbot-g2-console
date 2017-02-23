@@ -12,6 +12,8 @@ import scalafx.beans.binding.Bindings
 import scalafx.scene.paint.Color
 import scalafx.collections.ObservableBuffer
 import scalafx.event.ActionEvent
+import scalafx.beans.property.BooleanProperty
+import scalafx.application.Platform
 
 object Console {
   sealed trait Msg {
@@ -29,10 +31,11 @@ object Console {
  * @author asmirnov
  *
  */
-class Console {
+class Console { console =>
   
   val buffer = ObservableBuffer.empty[Console.Msg]
   var listener: Option[(String => Unit)] = None
+  val enabled = BooleanProperty(false)
   
   val node: Node = {
     new VBox {
@@ -72,20 +75,31 @@ class Console {
           val input = new TextField {
               hgrow = Priority.Always
               onAction = {ae:ActionEvent => send }
+              enabled <== console.enabled
             }
           children = List(
             input,
             new Button {
               text = "Send"
               onAction = {ae:ActionEvent => send }
+              enabled <== console.enabled
             })
         })
     }
   }
-  def onInput(line: String) = buffer += Console.In(line)
   
-  def onOutput(line: String) = buffer += Console.Out(line)
+  def addInput(line: String) = buffer += Console.In(line)
+  
+  def addOutput(line: String) = buffer += Console.Out(line)
 
-  def setListener(f: String => Unit) = listener = Some(f)
+  def onAction(f: String => Unit) = listener = Some(f)
+  
+  def bind(printer: Printer)  {
+  console.onAction(printer.sendLine)
+
+  printer.addReceiveListener{ l => Platform.runLater{console.addInput(l)} }
+  printer.addSendListener{ l => Platform.runLater{console.addOutput(l)} }
+    
+  }
 }
 
