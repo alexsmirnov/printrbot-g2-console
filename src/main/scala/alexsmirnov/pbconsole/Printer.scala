@@ -45,18 +45,18 @@ class Printer(port: Port) {
   val lines = transform(merge(dataLine, transform(commands, async[String]())), new Fork[String])
   transform(lines, linesToBytes).subscribe(port)
   // input pipeline
-  val linesIn = transform(transform(port, toLines), new Fork[String])
+  val linesIn = transform(port, toLines)
+  
+  val responses = transform(transform(linesIn,map[String,Response](Response(_))), new Fork[Response])
 
-  val responses = flatMap[String, Long] { l =>
-    try {
-      val json = parse(l)
-      if ((json \ "r") != JNothing) List(1L) else Nil
-    } catch {
-      case t: Throwable => Nil
-    }
+  val commandResponses = flatMap[Response, Long] { 
+    case cr:CommandResponse => List(1L)
+    case _ => Nil
   }
-  linesIn.subscribe(responses)
-  responses.subscribe(linemode.barrier)
+  
+  responses.subscribe(commandResponses)
+  
+  commandResponses.subscribe(linemode.barrier)
 
   def addStateListener(l: Port.StateEvent => Unit) = port.addStateListener(l)
 
@@ -64,7 +64,7 @@ class Printer(port: Port) {
 
   def sendData(dataLine: String): Unit = data.sendNext(dataLine)
 
-  def addReceiveListener(l: String => Unit): Unit = linesIn.subscribe(listener(l))
+  def addReceiveListener(r: Response => Unit): Unit = responses.subscribe(listener(r))
 
   def addSendListener(l: String => Unit): Unit = lines.subscribe(listener(l))
   

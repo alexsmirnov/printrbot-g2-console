@@ -57,7 +57,7 @@ override val defaultTestSignaler = ThreadSignaler
   }
   it should "receive responses" in { p =>
     val received = new CopyOnWriteArrayList[String]
-    p.addReceiveListener(received.add(_))
+    p.addReceiveListener{ r => received.add(r.rawLine)}
     startAndWait(p)
     val data = Future(dataStream.take(100).foreach(p.sendData))
     eventually(received.size === 100)

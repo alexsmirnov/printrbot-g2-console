@@ -94,7 +94,7 @@ class Console { console =>
 
   val statusReport = """\{(sr\:|"sr"\:)""".r
 
-  def addInput(line: String) = if (statusReport.findFirstIn(line).isEmpty) {
+  def addInput(line: String) {
     buffer += Console.In(line)
   }
 
@@ -105,7 +105,10 @@ class Console { console =>
   def bind(printer: PrinterModel) {
     enabled <== printer.connected
     onAction(printer.sendLine)
-    printer.addReceiveListener(addInput)
+    printer.addReceiveListener({ 
+      case sr: StatusReport => ()
+      case r => addInput(r.rawLine)
+    })
     printer.addSendListener(addOutput)
   }
 }
