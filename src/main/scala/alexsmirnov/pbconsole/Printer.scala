@@ -4,6 +4,7 @@ import alexsmirnov.pbconsole.serial.Port
 import alexsmirnov.pbconsole.serial.PortStub
 import scala.collection.{ Map, Seq, mutable }
 import scalafx.beans.property.BooleanProperty
+import alexsmirnov.stream._
 import alexsmirnov.stream.ReactiveOps._
 import alexsmirnov.pbconsole.serial._
 import org.json4s._
@@ -37,7 +38,7 @@ class Printer(port: Port) {
 
   // Build output pipeline
   val data = new SimplePublisher[String]
-  val linemode = new Sync[String](4)
+  val linemode = new Barrier[String](4)
 
   val dataLine = transform(transform(data, async[String](10)), linemode)
   val commands = new SimplePublisher[String] 
