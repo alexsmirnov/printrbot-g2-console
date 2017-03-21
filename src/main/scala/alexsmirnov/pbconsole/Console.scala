@@ -15,6 +15,8 @@ import scalafx.event.ActionEvent
 import scalafx.beans.property.BooleanProperty
 import scalafx.application.Platform
 import scalafx.beans.binding.StringBinding
+import scalafx.scene.input.KeyEvent
+import scalafx.scene.input.KeyCode
 
 object Console {
 
@@ -38,6 +40,7 @@ class Console { console =>
   val buffer = ObservableBuffer.empty[Console.Msg]
   var listener: Option[(String => Unit)] = None
   val enabled = BooleanProperty(false)
+  var history: List[String] = Nil
 
   val node: Node = {
     new VBox {
@@ -71,8 +74,32 @@ class Console { console =>
         },
         new HBox {
           hgrow = Priority.Always
+          var currentHistory: Int = 0
+          filterEvent(KeyEvent.KeyPressed) { ev: KeyEvent =>
+            if (ev.code == KeyCode.Up) {
+              if (currentHistory < history.size) {
+                val s = history(currentHistory)
+                input.text = s
+                input.positionCaret(s.size)
+                input.requestFocus()
+                currentHistory += 1
+              }
+              ev.consume()
+            } else if (ev.code == KeyCode.Down) {
+              if (currentHistory > 0) {
+                currentHistory -= 1
+                val s = if(currentHistory > 0) history(currentHistory-1) else ""
+                input.text = s
+                input.positionCaret(s.size)
+                input.requestFocus()
+              }
+              ev.consume()
+            }
+          }
           def send {
             listener.foreach(_(input.text()))
+            history = input.text() :: history
+            currentHistory = 0
             input.clear()
             input.requestFocus()
           }
@@ -105,7 +132,7 @@ class Console { console =>
   def bind(printer: PrinterModel) {
     enabled <== printer.connected
     onAction(printer.sendLine)
-    printer.addReceiveListener({ 
+    printer.addReceiveListener({
       case sr: StatusReport => ()
       case r => addInput(r.rawLine)
     })
