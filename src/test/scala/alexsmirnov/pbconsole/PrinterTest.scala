@@ -20,7 +20,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
 
 override val defaultTestSignaler = ThreadSignaler
   def withFixture(test: OneArgTest) = {
-      withFixture(test.toNoArgTest(new Printer(new PortStub()))) // "loan" the fixture to the test
+      withFixture(test.toNoArgTest(new Printer(new PortStub(),G2Response(_)))) // "loan" the fixture to the test
   }
 
   def startAndWait(p: Printer) = {

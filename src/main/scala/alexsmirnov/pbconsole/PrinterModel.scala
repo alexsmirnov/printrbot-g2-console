@@ -12,6 +12,7 @@ class PrinterModel(val printer: Printer) {
   val speed = IntegerProperty(0)
   val port = StringProperty("")
   val status = when(connected) choose(port.zip(speed).map[String,StringBinding] { n => s"Connected to ${n._1} at ${n._2}" }) otherwise("Disconnected")
+  
   printer.addStateListener(connected.asListener { 
     case Port.Connected(name,baud) => speed() = baud;port() = name; true
     case Port.Disconnected => false

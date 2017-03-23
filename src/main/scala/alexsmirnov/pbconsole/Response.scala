@@ -1,56 +1,35 @@
 package alexsmirnov.pbconsole
-import org.json4s._
-import org.json4s.JsonDSL._
-import org.json4s.native.JsonMethods._
-import org.json4s.prefs.EmptyValueStrategy
 
 object Response {
-  implicit val formats = new DefaultFormats {
-    // Brings in default date formats etc.
-    override val allowNull: Boolean = true
-    override val wantsBigDecimal: Boolean = true
-    override val emptyValueStrategy: EmptyValueStrategy = new EmptyValueStrategy {
-      def noneValReplacement = None
-
-      def replaceEmpty(value: JValue) = value match {
-        case JNothing => throw new MappingException("Missed value")
-        case oth => oth
-      }
-    }
-  }
-
-  def apply(line: String): Response = {
-    val jsonOpt = parseOpt(line)
-    jsonOpt.flatMap { json =>
-      val rawLineJson: JValue = ("rawLine" -> line)
-      extractResponse(json merge rawLineJson)
-    }.getOrElse(UnknownResponse(line))
-  }
-  
-  def extractResponse(json: JValue): Option[Response] = {
-    if (json \ "r" != JNothing) {
-      json.extractOpt[CommandResponse]
-    } else if (json \ "sr" != JNothing) {
-      json.extractOpt[StatusReport]
-    } else if (json \ "er" != JNothing) {
-      json.extractOpt[ExceptionReport]
-    } else None
-  }
 }
 
 trait Response {
   def rawLine: String
 }
 
+trait HiddenResponse extends Response
+
+trait CommandResponse extends Response {
+  def isError: Boolean
+}
+
+trait StatusResponse extends Response {
+  def values: List[ResponseValue]
+}
+
+trait ResponseValue
+
+// Temperature status
+case class ExtruderTemp(value: Float) extends ResponseValue
+case class ExtruderTarget(value: Float) extends ResponseValue
+case class ExtruderOutput(pwm: Int) extends ResponseValue
+case class BedTemp(value: Float) extends ResponseValue
+case class BedTarget(value: Float) extends ResponseValue
+case class BedOutput(pwm: Int) extends ResponseValue
+// Current position
+case class PositionX(value: Float) extends ResponseValue
+case class PositionY(value: Float) extends ResponseValue
+case class PositionZ(value: Float) extends ResponseValue
+case class PositionE(value: Float) extends ResponseValue
+
 case class UnknownResponse(rawLine: String) extends Response
-
-case class CommandResponse(r: JValue, f: List[Int], rawLine: String) extends Response {
-  def status = f(1)
-  def linesAvailable = f(2)
-}
-
-case class StatusReport(sr: Map[String, Double], rawLine: String) extends Response {
-  def get(field: String): Option[Double] = sr.get(field)
-}
-case class ExceptionInfo(fb: BigDecimal, st: Int, msg: String)
-case class ExceptionReport(er: ExceptionInfo, rawLine: String) extends Response

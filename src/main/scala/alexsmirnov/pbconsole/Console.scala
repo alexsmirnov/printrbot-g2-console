@@ -119,7 +119,6 @@ class Console { console =>
     }
   }
 
-  val statusReport = """\{(sr\:|"sr"\:)""".r
 
   def addInput(line: String) {
     buffer += Console.In(line)
@@ -133,7 +132,7 @@ class Console { console =>
     enabled <== printer.connected
     onAction(printer.sendLine)
     printer.addReceiveListener({
-      case sr: StatusReport => ()
+      case sr: HiddenResponse => ()
       case r => addInput(r.rawLine)
     })
     printer.addSendListener(addOutput)

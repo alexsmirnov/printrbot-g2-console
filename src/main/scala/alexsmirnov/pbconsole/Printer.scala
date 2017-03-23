@@ -23,10 +23,10 @@ object Printer {
       case Some(portname) => Port(portname.r)
       case None => Port("/dev/tty\\.usbmodem.*".r)
     }
-    new Printer(port)
+    new Printer(port,SmoothieResponse(_))
   }
 }
-class Printer(port: Port) {
+class Printer(port: Port,responseParser: String => Response) {
 
   def start() {
     port.run()
@@ -48,7 +48,7 @@ class Printer(port: Port) {
   // input pipeline
   val linesIn = transform(port, toLines)
   
-  val responses = transform(transform(linesIn,map[String,Response](Response(_))), new Fork[Response])
+  val responses = transform(transform(linesIn,map[String,Response](responseParser(_))), new Fork[Response])
 
   val commandResponses = flatMap[Response, Long] { 
     case cr:CommandResponse => List(1L)
