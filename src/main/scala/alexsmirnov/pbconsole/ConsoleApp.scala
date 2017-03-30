@@ -51,6 +51,8 @@ import scalafx.concurrent.WorkerStateEvent
 import scalafx.beans.property.{ BooleanProperty, StringProperty, IntegerProperty }
 import alexsmirnov.pbconsole.serial.Port
 import scalafx.application.Platform
+import scalafx.scene.control.Accordion
+import scalafx.scene.control.TitledPane
 
 /**
  * TODO: reconnect button, status from {sr:...}, movement control
@@ -101,23 +103,23 @@ object ConsoleApp extends JFXApp {
   }
 
   def tabs: Node = {
-    new TabPane {
+    new Accordion {
       vgrow = Priority.Always
       hgrow = Priority.Always
-      tabs = Seq(
-        new Tab {
+      panes = Seq(
+        new TitledPane {
+          text = "Printer control"
+//          closable = false
+        },
+        new TitledPane {
           text = "Print"
-          closable = false
+//          closable = false
           //                content = printPage
         },
-        new Tab {
-          text = "Printer control"
-          closable = false
-        },
-        new Tab {
+          new TitledPane {
           hgrow = Priority.Always
           text = "Console"
-          closable = false
+//          closable = false
           content = console.node
         })
     }
