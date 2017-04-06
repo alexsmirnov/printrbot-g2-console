@@ -11,8 +11,6 @@ import org.json4s._
 import org.json4s.native.JsonMethods._
 
 /**
- * response : {"r":{"sv":1},"f":[1,0,8]}
- * TODO: restore streams after reconnect, async command , filter out status report
  * @author asmirnov
  *
  */
@@ -50,9 +48,8 @@ class Printer(port: Port,responseParser: String => Response) {
   
   val responses = transform(transform(linesIn,map[String,Response](responseParser(_))), new Fork[Response])
 
-  val commandResponses = flatMap[Response, Long] { 
-    case cr:CommandResponse => List(1L)
-    case _ => Nil
+  val commandResponses = collect[Response, Long] { 
+    case cr:CommandResponse => 1L
   }
   
   responses.subscribe(commandResponses)

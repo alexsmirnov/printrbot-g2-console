@@ -54,7 +54,7 @@ second_usb_serial_enable                     false            # This enables a s
 
 ## Extruder module configuration
 extruder.hotend.enable                          true             # Whether to activate the extruder module at all. All configuration is ignored if false
-extruder.hotend.steps_per_mm                    730              # Steps per mm for extruder stepper
+extruder.hotend.steps_per_mm                    3348.8           # Steps per mm for extruder stepper. 200 * 128 * 3 / (7.3 * 3.142) 
 extruder.hotend.default_feed_rate               600              # Default rate ( mm/minute ) for moves where only the extruder moves
 extruder.hotend.acceleration                    500              # Acceleration for the stepper motor mm/sec²
 extruder.hotend.max_speed                       100               # mm/s
@@ -84,13 +84,16 @@ temperature_control.hotend.resample          20               # resample reading
 temperature_control.hotend.thermistor_pin    0.24             # Pin for the thermistor to read
 temperature_control.hotend.heater_pin        2.7              # Pin that controls the heater
 #temperature_control.hotend.heater_pin        2.5              # Pin that controls the heater
-temperature_control.hotend.thermistor        EPCOS100K        # see http://smoothieware.org/temperaturecontrol#toc5
+#temperature_control.hotend.thermistor        EPCOS100K        # see http://smoothieware.org/temperaturecontrol#toc5
+temperature_control.hotend.thermistor        Semitec        # see http://smoothieware.org/temperaturecontrol#toc5
 #temperature_control.hotend.beta             4066             # or set the beta value
 
 temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
 temperature_control.hotend.max_temp          270              # Set maximum temperature - Will prevent heating above 300 by default
+temperature_control.hotend.max_pwm           220              # Maximum PWM value for the heating element. This can be from 0 to 255.
+#64 is a good value if driving a 12v resistor with 24v. 255 is the default and the normal value if you are using the right voltage for your heating element.
 #temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below 0 by default
 
 # safety control is enabled by default and can be overidden here, the values show the defaults
@@ -210,7 +213,7 @@ zprobe.probe_height                          15               # how much above b
 leveling-strategy.three-point-leveling.enable         true        # a leveling strategy that probes three points to define a plane and keeps the Z parallel to that plane
 leveling-strategy.three-point-leveling.point1         22.0,200.0   # the first probe point (x,y) optional may be defined with M557
 leveling-strategy.three-point-leveling.point2         22.0,2.0 # the second probe point (x,y)
-leveling-strategy.three-point-leveling.point3         112.0,2.0   # the third probe point (x,y)
+leveling-strategy.three-point-leveling.point3         100.0,2.0   # the third probe point (x,y)
 #leveling-strategy.three-point-leveling.home_first     true        # home the XY axis before probing
 #leveling-strategy.three-point-leveling.tolerance      0.03        # the probe tolerance in mm, anything less that this will be ignored, default is 0.03mm
 leveling-strategy.three-point-leveling.probe_offsets   20,0,0       # the probe offsets from nozzle, must be x,y,z, default is no offset

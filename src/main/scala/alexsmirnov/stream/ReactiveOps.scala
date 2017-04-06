@@ -12,17 +12,21 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
 
-object ReactiveOps {
+object ReactiveOps { self =>
   
 
   def transform[A, B](pub: Publisher[A], proc: Processor[A, B]): Publisher[B] = { pub.subscribe(proc); proc }
 
-  
-
-
-
-
-
+  implicit class publisherOps[A](val pub: Publisher[A]) extends AnyVal {
+    def async(queueSize: Int = 100) = self.transform(pub,self.async[A](queueSize))
+    def fold[B, C](zero: => C, f: (A, C) => Either[C, B], finish: C => B) = self.transform(pub,self.fold(zero, f, finish))
+    def flatMap[B](f: A => Traversable[B]) = self.transform(pub,self.flatMap(f))
+    def map[B](f: A => B) = self.transform(pub, self.map(f))
+    def collect[B](pf: PartialFunction[A,B]) = self.transform(pub, self.collect(pf))
+    def merge(p: Publisher[A] *): Publisher[A] = self.merge(p: _*)
+    def fork: Publisher[A] = self.transform(pub, new Fork[A])
+    def transform[B](proc: Processor[A, B]): Publisher[B] = self.transform(pub, proc)
+  }
 
   class Listener[A](f: A => Unit) extends SubscriberBase[A] {
     override def onSubscribe(s: Subscription) {

@@ -44,6 +44,7 @@ object SmoothieResponse {
     def isError: Boolean = true
   }
   case class CommandResponseWithStatus(rawLine: String, values: List[ResponseValue], isError: Boolean = false) extends StatusResponse with CommandResponse
+  
   def apply(line: String): Response = line match {
     case OK_RESPONSE(msg) =>
       val responses = valueMatchers.flatMap { pf => pf.applyOrElse(msg, { _: String => Nil }) }
