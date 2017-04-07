@@ -28,22 +28,13 @@ object ReactiveOps { self =>
     def transform[B](proc: Processor[A, B]): Publisher[B] = self.transform(pub, proc)
   }
 
-  class Listener[A](f: A => Unit) extends SubscriberBase[A] {
-    override def onSubscribe(s: Subscription) {
-      super.onSubscribe(s)
-      request(Long.MaxValue)
-    }
-    def onNext(a: A) { f(a); request(1L) }
-    def onComplete() {}
-    def onError(t: Throwable) {}
-  }
 
   class Barrier[A](size: Long) extends ProcessorBase[A, A](size) { self =>
     // Subscriber part
     def onNext(a: A) {
       sendNext(a)
     }
-    val barrier = new Listener[Any]({ _ => self.request(1L) })
+    val barrier = new ListenerSubscriber[Any]({ _ => self.request(1L) })
   }
   
 
@@ -57,7 +48,7 @@ object ReactiveOps { self =>
 
   def collect[A, B](pf: PartialFunction[A, B]) = new FlatMap(pf.lift.andThen(_.toTraversable))
 
-  def listener[A](f: A => Unit) = new Listener[A](f)
+  def listener[A](f: A => Unit) = new ListenerSubscriber[A](f)
 
   def merge[A](p: Publisher[A] *): Publisher[A] = {
     val result = new Merge[A]

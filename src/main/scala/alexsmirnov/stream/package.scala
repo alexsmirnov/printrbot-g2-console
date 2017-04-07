@@ -1,6 +1,7 @@
 package alexsmirnov
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.ThreadFactory
+import org.reactivestreams._
 
 package object stream {
   
@@ -13,4 +14,5 @@ package object stream {
           t
         }
   }
+  
 }

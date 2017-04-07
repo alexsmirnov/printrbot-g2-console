@@ -35,32 +35,62 @@ class Printer(port: Port,responseParser: String => Response) {
   }
 
   // Build output pipeline
-  val data = new SimplePublisher[String]
-  val linemode = new Barrier[String](4)
-
-  val dataLine = transform(transform(data, async[String](10)), linemode)
-  val commands = new SimplePublisher[String] 
-
-  val lines = transform(merge(dataLine, transform(commands, async[String]())), new Fork[String])
-  transform(lines, linesToBytes).subscribe(port)
-  // input pipeline
-  val linesIn = transform(port, toLines)
+  val data = new SimplePublisher[Request]
   
-  val responses = transform(transform(linesIn,map[String,Response](responseParser(_))), new Fork[Response])
-
-  val commandResponses = collect[Response, Long] { 
-    case cr:CommandResponse => 1L
+  var commandsStack: List[CommandRequest] = Nil
+  
+  val linemode = new ProcessorBase[Request,String](4){
+    def onNext(r: Request) {
+      r match {
+        case cr: CommandRequest =>
+          this.synchronized(
+            commandsStack = cr :: commandsStack
+          )
+          sendNext(r.line)
+        case _ =>
+          sendNext(r.line)
+          request(1L)
+      }
+    }
+    
   }
+  val barrier = new ProcessorBase[Response,Response](){
+      
+    def onNext(resp: Response) {
+      resp match {
+        case cr: CommandResponse =>
+          val commandRequest = linemode.synchronized(
+              commandsStack match {
+                case qr :: rest => commandsStack = rest ; Some(qr)
+                case Nil => None
+              }
+              )
+          commandRequest match {
+            case Some(command) => command.onCommandResponse(cr);linemode.request(1L)
+            case None => sendNext(resp)
+          }
+        case _ =>
+         sendNext(resp)
+      }
+      request(1L)
+    }
+  }
+
+  val dataLine = data.async(10).transform(linemode)
   
-  responses.subscribe(commandResponses)
+  val commands = new SimplePublisher[String]
+
+  val lines = dataLine.merge(commands.async()).fork
+  lines.transform(linesToBytes).subscribe(port)
   
-  commandResponses.subscribe(linemode.barrier)
+  // input pipeline
+  val responses = port.transform(toLines).map(responseParser(_)).transform(barrier)
 
   def addStateListener(l: Port.StateEvent => Unit) = port.addStateListener(l)
 
-  def sendLine(line: String): Unit = { linemode.request(-1L); commands.sendNext(line) }
+  def sendLine(line: String): Unit = { commands.sendNext(line) }
 
-  def sendData(dataLine: String): Unit = data.sendNext(dataLine)
+  def sendData(dataLine: Request): Unit = data.sendNext(dataLine)
 
   def addReceiveListener(r: Response => Unit): Unit = responses.subscribe(listener(r))
 

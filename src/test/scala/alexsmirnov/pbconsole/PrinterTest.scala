@@ -35,7 +35,7 @@ override val defaultTestSignaler = ThreadSignaler
       assert(connected === true)
     }
   }
-  val dataStream = Stream.from(1).map { n => s"G0 X$n Y$n" }
+  val dataStream = Stream.from(1).map { n => GCommand(s"G0 X$n Y$n") }
   val commandStream = Stream.from(1).map { n => s"{sr:{}}" }
   "Printer" should "set connected on connect" in { p =>
     startAndWait(p)
