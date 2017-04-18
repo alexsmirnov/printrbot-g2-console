@@ -45,7 +45,7 @@ case class G2CommandResponse(r: JValue, f: List[Int], rawLine: String) extends C
   def values = Nil
 }
 
-case class G2StatusReport(sr: Map[String, Double], rawLine: String) extends StatusResponse with HiddenResponse {
+case class G2StatusReport(sr: Map[String, Double], rawLine: String) extends StatusResponse {
   def get(field: String): Option[Double] = sr.get(field)
   def values = Nil
 }

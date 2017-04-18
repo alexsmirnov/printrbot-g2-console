@@ -9,6 +9,7 @@ import alexsmirnov.stream.ReactiveOps._
 import alexsmirnov.pbconsole.serial._
 import org.json4s._
 import org.json4s.native.JsonMethods._
+import scala.collection.immutable.Queue
 
 /**
  * @author asmirnov
@@ -21,10 +22,10 @@ object Printer {
       case Some(portname) => Port(portname.r)
       case None => Port("/dev/tty\\.usbmodem.*".r)
     }
-    new Printer(port,SmoothieResponse(_))
+    new Printer(port, SmoothieResponse(_))
   }
 }
-class Printer(port: Port,responseParser: String => Response) {
+class Printer(port: Port, responseParser: String => Response) {
 
   def start() {
     port.run()
@@ -36,64 +37,61 @@ class Printer(port: Port,responseParser: String => Response) {
 
   // Build output pipeline
   val data = new SimplePublisher[Request]
-  
-  var commandsStack: List[CommandRequest] = Nil
-  
-  val linemode = new ProcessorBase[Request,String](4){
+
+  var commandsStack: Queue[CommandRequest] = Queue.empty
+
+  val linemode = new ProcessorBase[Request, Request](4) {
     def onNext(r: Request) {
       r match {
         case cr: CommandRequest =>
           this.synchronized(
-            commandsStack = cr :: commandsStack
-          )
-          sendNext(r.line)
+            commandsStack = commandsStack.enqueue(cr))
+          sendNext(r)
         case _ =>
-          sendNext(r.line)
+          sendNext(r)
           request(1L)
       }
     }
-    
+
   }
-  val barrier = new ProcessorBase[Response,Response](){
-      
+  val barrier = new ProcessorBase[Response, (Source, Response)]() {
+
     def onNext(resp: Response) {
-      resp match {
+      val source = resp match {
         case cr: CommandResponse =>
-          val commandRequest = linemode.synchronized(
-              commandsStack match {
-                case qr :: rest => commandsStack = rest ; Some(qr)
-                case Nil => None
-              }
-              )
-          commandRequest match {
-            case Some(command) => command.onCommandResponse(cr);linemode.request(1L)
-            case None => sendNext(resp)
+          linemode.synchronized(commandsStack.dequeueOption.
+            map { case (command, queue) => commandsStack = queue; command }).map { command =>
+            command.onCommandResponse(cr); linemode.request(1L)
+            command.source
           }
-        case _ =>
-         sendNext(resp)
+        case r => linemode.synchronized(commandsStack.headOption).map { command =>
+          command.onResponse(r)
+          command.source
+        }
       }
+      sendNext(source.getOrElse(Source.Unknown) -> resp)
       request(1L)
     }
   }
 
   val dataLine = data.async(10).transform(linemode)
-  
-  val commands = new SimplePublisher[String]
+
+  val commands = new SimplePublisher[Request]
 
   val lines = dataLine.merge(commands.async()).fork
-  lines.transform(linesToBytes).subscribe(port)
-  
+  lines.map(_.line).transform(linesToBytes).subscribe(port)
+
   // input pipeline
   val responses = port.transform(toLines).map(responseParser(_)).transform(barrier)
 
   def addStateListener(l: Port.StateEvent => Unit) = port.addStateListener(l)
 
-  def sendLine(line: String): Unit = { commands.sendNext(line) }
+  def sendLine(line: String): Unit = { commands.sendNext(PlainTextRequest(line, Source.Console)) }
 
   def sendData(dataLine: Request): Unit = data.sendNext(dataLine)
 
-  def addReceiveListener(r: Response => Unit): Unit = responses.subscribe(listener(r))
+  def addReceiveListener(r: (Source, Response) => Unit): Unit = responses.subscribe(listener({ case (s, resp) => r(s, resp) }))
 
-  def addSendListener(l: String => Unit): Unit = lines.subscribe(listener(l))
-  
+  def addSendListener(l: Request => Unit): Unit = lines.subscribe(listener(l))
+
 }

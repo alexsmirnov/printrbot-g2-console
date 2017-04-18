@@ -35,7 +35,7 @@ override val defaultTestSignaler = ThreadSignaler
       assert(connected === true)
     }
   }
-  val dataStream = Stream.from(1).map { n => GCommand(s"G0 X$n Y$n") }
+  val dataStream = Stream.from(1).map { n => GCommand(s"G0 X$n Y$n",Source.Console) }
   val commandStream = Stream.from(1).map { n => s"{sr:{}}" }
   "Printer" should "set connected on connect" in { p =>
     startAndWait(p)
@@ -57,7 +57,7 @@ override val defaultTestSignaler = ThreadSignaler
   }
   it should "receive responses" in { p =>
     val received = new CopyOnWriteArrayList[String]
-    p.addReceiveListener{ r => received.add(r.rawLine)}
+    p.addReceiveListener{ (s,r) => received.add(r.rawLine)}
     startAndWait(p)
     val data = Future(dataStream.take(100).foreach(p.sendData))
     eventually(received.size === 100)

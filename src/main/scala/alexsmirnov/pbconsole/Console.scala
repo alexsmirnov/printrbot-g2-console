@@ -132,7 +132,6 @@ class Console { console =>
     enabled <== printer.connected
     onAction(printer.sendLine)
     printer.addReceiveListener({
-      case sr: HiddenResponse => ()
       case r => addInput(r.rawLine)
     })
     printer.addSendListener(addOutput)

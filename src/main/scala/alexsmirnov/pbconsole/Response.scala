@@ -7,8 +7,6 @@ trait Response {
   def rawLine: String
 }
 
-trait HiddenResponse extends Response
-
 trait CommandResponse extends Response {
   def isError: Boolean
 }
@@ -17,7 +15,7 @@ trait StatusResponse extends Response {
   def values: List[ResponseValue]
 }
 
-trait ResponseValue
+sealed trait ResponseValue
 
 // Temperature status
 case class ExtruderTemp(value: Float) extends ResponseValue
