@@ -141,7 +141,7 @@ object ConsoleApp extends JFXApp {
   val counter = new AtomicInteger()
   val scheduler = ScheduledService(Task { "{r:${counter.incrementAndGet} }" })
   scheduler.period = Duration(10000.0)
-  scheduler.onSucceeded = { ev: WorkerStateEvent => console.addInput(scheduler.lastValue()) }
+//  scheduler.onSucceeded = { ev: WorkerStateEvent => console.addInput(scheduler.lastValue()) }
   //  scheduler.start()
   printer.start()
 }

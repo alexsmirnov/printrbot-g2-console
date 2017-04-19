@@ -11,6 +11,7 @@ class PrinterModel(val printer: Printer) {
   val connected = BooleanProperty(false)
   val speed = IntegerProperty(0)
   val port = StringProperty("")
+  
   val status = when(connected) choose(port.zip(speed).map[String,StringBinding] { n => s"Connected to ${n._1} at ${n._2}" }) otherwise("Disconnected")
   
   printer.addStateListener(connected.asListener { 
@@ -18,15 +19,15 @@ class PrinterModel(val printer: Printer) {
     case Port.Disconnected => false
   })
 
-  def sendLine(line: String): Unit = {
-    printer.sendLine(line)
+  def sendLine(line: String,src: Source): Unit = {
+    printer.sendData(Request(line,src))
   }
 
-  def addReceiveListener(listener: Response => Unit) = {
-    printer.addReceiveListener {(s,l) =>runInFxThread(listener(l))}
+  def addReceiveListener(listener: (Source,String) => Unit) = {
+    printer.addReceiveListener {(s,l) => runInFxThread(listener(s,l.rawLine))}
   }
   
-  def addSendListener(listener: String => Unit) = {
-    printer.addSendListener {l =>runInFxThread(listener(l.line))}
+  def addSendListener(listener: (Source,String) => Unit) = {
+    printer.addSendListener {l => runInFxThread(listener(l.source,l.line))}
   }
 }

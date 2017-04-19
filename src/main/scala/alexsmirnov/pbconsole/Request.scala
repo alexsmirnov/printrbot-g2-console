@@ -5,6 +5,13 @@ sealed trait Request {
   def source: Source
 }
 
+object Request {
+  val GCode = """^([GgMm])(\d+)\s*(.*)""".r
+  def apply(line: String, source: Source): Request = line match {
+    case GCode(cmd,n,params) => GCommand(line,source)
+    case other => PlainTextRequest(line,source)
+  }
+}
 case class PlainTextRequest(line: String,source: Source) extends Request
 
 sealed trait CommandRequest extends Request {
@@ -17,7 +24,9 @@ case class GCommand(line: String,source: Source) extends CommandRequest {
   def onCommandResponse(r: CommandResponse) {}
 }
 
-case class QueryCommand(line: String,source: Source, listener: CommandResponse => Unit) extends CommandRequest {
-  def onResponse(r: Response) {}
+case class QueryCommand(line: String,source: Source,
+    listener: CommandResponse => Unit,
+    responseListener: Response => Unit = {_ =>()}) extends CommandRequest {
+  def onResponse(r: Response) {responseListener(r)}
   def onCommandResponse(r: CommandResponse) = listener(r)
 }

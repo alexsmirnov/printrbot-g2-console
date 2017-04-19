@@ -1,51 +1,58 @@
 package alexsmirnov.pbconsole
 
-import org.scalatest.fixture.FlatSpec
-import alexsmirnov.pbconsole.serial.PortStub
-import org.scalatest.concurrent.Eventually
-import scala.concurrent.{ Future, Await, ExecutionContext, duration }
 import java.util.concurrent.CopyOnWriteArrayList
-import alexsmirnov.pbconsole.serial.Port
-import org.scalatest.time.SpanSugar.GrainOfTime
-import org.scalatest.concurrent.TimeLimits
-import org.scalatest.time.SpanSugar.GrainOfTime
-import org.scalatest.concurrent.TimeLimitedTests
-import org.scalatest.concurrent.ThreadSignaler
 import java.util.concurrent.Semaphore
+
+import scala.collection.JavaConversions._
+import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
+
+import org.scalatest.Finders
+import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.ThreadSignaler
+import org.scalatest.concurrent.TimeLimitedTests
+import org.scalatest.fixture.FlatSpec
+import org.scalatest.time.SpanSugar._
+
+import alexsmirnov.pbconsole.serial.Port
+import alexsmirnov.pbconsole.serial.PortStub
+import scala.concurrent.Promise
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
   import ExecutionContext.Implicits._
-  import duration._
-  type FixtureParam = Printer
-  val timeLimit = new GrainOfTime(2).seconds
+  type FixtureParam = (Semaphore, Printer)
+  val timeLimit = 2.seconds
 
   override val defaultTestSignaler = ThreadSignaler
 
-  var semaphore: Semaphore = _
-
-  val GCmd = """^G(\d+).*""".r
-  val MCmd = """^M(\d+).*""".r
-  def smoothie(line: String): String = {
-    println("receive: "+line)
-    semaphore.acquire()
-    line match {
-      case GCmd(_) => "ok"
-      case MCmd("105") => "ok T:20.0 20.0 @0 B:20.0 30.0 @255"
-      case MCmd("114") => "ok C: X100 Y100 Z100 E0"
-      case MCmd(_) => "ok"
-      case "{sr:{}}" => "{r:{}}"
-      case other => "unknown command"
-    }
-  }
   def withFixture(test: OneArgTest) = {
-    semaphore = new Semaphore(0)
-    withFixture(test.toNoArgTest(new Printer(new PortStub(smoothie _,"Smoothie"), SmoothieResponse(_)))) // "loan" the fixture to the test
+
+    val semaphore = new Semaphore(0)
+    val printer = new Printer(new PortStub({ line: String =>
+      semaphore.acquire()
+      line match {
+        case PortStub.GCmd(n) => Seq("ok " + n)
+        case PortStub.MCmd("105") => Seq("ok T:20.0 /20.0 @0 B:20.0 /30.0 @255")
+        case PortStub.MCmd("114") => Seq("ok C: X100 Y100 Z100 E0")
+        case PortStub.MCmd(_) => Seq("ok")
+        case "{sr:{}}" => Seq("{r:{}}")
+        case other => Seq("unknown command")
+      }
+    }, "Smoothie"), SmoothieResponse(_))
+    try {
+      withFixture(test.toNoArgTest(semaphore -> printer)) // "loan" the fixture to the test
+    } finally {
+      printer.stop()
+    }
   }
 
   def startAndWait(p: Printer) = {
     @volatile
     var connected = false
-    p.addReceiveListener{ (src,resp) => println(s"Received $resp to request from $src") }
+    val received = new CopyOnWriteArrayList[(Source,Response)]
+    p.addReceiveListener { (s, r) => received.add(s -> r) }
     p.addStateListener {
       case Port.Connected(_, _) => connected = true
       case Port.Disconnected => connected = false
@@ -54,15 +61,19 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
     eventually {
       assert(connected === true)
     }
+    received
   }
-  
-  val dataStream = Stream.from(1).map { n => GCommand(s"G0 X$n Y$n", Source.Console) }
+
+  val dataStream = Stream.from(1).map { n => GCommand(s"G$n X$n Y$n", Source.Console) }
   val commandStream = Stream.from(1).map { n => "{sr:{}}" }
-  
-  "Printer" should "set connected on connect" in { p =>
+
+  "Printer" should "set connected on connect" in { fp =>
+    val (semaphore, p) = fp
     startAndWait(p)
   }
-  it should "send data with back pressure" in { p =>
+  
+  it should "send data with back pressure" in { fp =>
+    val (semaphore, p) = fp
     startAndWait(p)
     Future(dataStream.take(20).foreach(p.sendData))
     Thread.sleep(150)
@@ -77,22 +88,46 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
     Thread.sleep(150)
     assert(p.commandsStack.size === 0)
   }
-  
-  it should "send commands immediately" in { p =>
+
+  it should "send commands immediately" in { fp =>
+    val (semaphore, p) = fp
     startAndWait(p)
     semaphore.release(105)
-    val data = Future(Stream.from(1).map { n => GCommand(s"X$n Y$n", Source.Console) }.take(50).foreach(p.sendData _) )
+    val data = Future(Stream.from(1).map { n => GCommand(s"X$n Y$n", Source.Console) }.take(50).foreach(p.sendData _))
     val start = System.currentTimeMillis()
     commandStream.take(50).foreach(p.sendLine)
     assert((System.currentTimeMillis() - start) < 20)
   }
-  
-  it should "receive responses" in { p =>
-    val received = new CopyOnWriteArrayList[String]
-    p.addReceiveListener { (s, r) => received.add(r.rawLine) }
+
+  it should "receive all responses in sent order" in { fp =>
+    val (semaphore, p) = fp
+    val received = startAndWait(p)
     semaphore.release(105)
-    startAndWait(p)
-    val data = Future(dataStream.take(60).foreach(p.sendData))
-    eventually(timeout(timeLimit))(assert(received.size >= 60))
+    val data = Future(dataStream.take(100).foreach(p.sendData))
+    eventually(timeout(timeLimit))(assert(received.size >= 101))
+    received.zipWithIndex.tail.foreach { case ((s,r),i) => assert(r.rawLine === s"ok $i") }
+  }
+  
+  it should "assign source to response" in { fp =>
+    val (semaphore, p) = fp
+    val received = startAndWait(p)
+    val sources = Seq[Source](Source.Console,Source.Job,Source.Monitor,Source.Job,Source.Monitor)
+    semaphore.release(10)
+    val data = Future(sources.map(Request("M1",_)).foreach(p.sendData))
+    eventually(timeout(timeLimit))(assert(received.size > sources.size))
+    received.tail.zip(sources).foreach { case ((s,r),es) => assert(s === es) }
+  }
+  it should "receive temperature in callback" in { fp =>
+    val (semaphore, p) = fp
+    semaphore.release(10)
+    val received = startAndWait(p)
+    val responsePromise = Promise[List[ResponseValue]]()
+    p.sendData(QueryCommand("M105",Source.Monitor,{
+      case sr: StatusResponse => responsePromise.success(sr.values)
+      case other => responsePromise.failure(new Throwable(s"unexpected response $other"))
+    }))
+    val result = Await.result(responsePromise.future, Duration(2,"sec"))
+    println(result)
+    assert(result.exists { _ == ExtruderTemp(20.0f) })
   }
 }
