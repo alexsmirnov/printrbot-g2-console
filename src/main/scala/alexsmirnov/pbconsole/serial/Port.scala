@@ -49,13 +49,6 @@ object Port {
 }
 
 /**
- * TODO: fatal error on disconnect
- * INFO: Disconnect  Some(gnu.io.NRSerialPort@511eed62)
- * get_java_var: invalid file descriptor
- * #
- * # A fatal error has been detected by the Java Runtime Environment:
- * Problematic frame:
- * # C  [libNRJavaSerial.jnilib+0x5b08]  read_byte_array+0x58
  * @author asmirnov
  *
  */
@@ -73,6 +66,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
     require(null != inputSubscribtion, "Subscriber required to run serial port")
     waitForConnect
   }
+  
   def close() = {
     disconnect(false)
   }

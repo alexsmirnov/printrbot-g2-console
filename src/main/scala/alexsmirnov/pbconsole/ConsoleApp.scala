@@ -62,11 +62,14 @@ import scalafx.scene.control.TitledPane
 object ConsoleApp extends JFXApp {
 
   val console = new Console()
+  
+  val printerControl = new PrinterControl
 
   val printer = Printer(parameters.named)
 
   
   val printerModel = new PrinterModel(printer)
+  
   console.bind(printerModel)
 
   stage = new PrimaryStage {
@@ -109,7 +112,7 @@ object ConsoleApp extends JFXApp {
       panes = Seq(
         new TitledPane {
           text = "Printer control"
-//          closable = false
+          content = printerControl.node
         },
         new TitledPane {
           text = "Print"
