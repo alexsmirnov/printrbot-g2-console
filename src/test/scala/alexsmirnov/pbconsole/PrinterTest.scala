@@ -11,6 +11,7 @@ import org.scalatest.concurrent.TimeLimits
 import org.scalatest.time.SpanSugar.GrainOfTime
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.concurrent.ThreadSignaler
+import java.util.concurrent.Semaphore
 
 class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
   import ExecutionContext.Implicits._
@@ -18,14 +19,33 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
   type FixtureParam = Printer
   val timeLimit = new GrainOfTime(2).seconds
 
-override val defaultTestSignaler = ThreadSignaler
+  override val defaultTestSignaler = ThreadSignaler
+
+  var semaphore: Semaphore = _
+
+  val GCmd = """^G(\d+).*""".r
+  val MCmd = """^M(\d+).*""".r
+  def smoothie(line: String): String = {
+    println("receive: "+line)
+    semaphore.acquire()
+    line match {
+      case GCmd(_) => "ok"
+      case MCmd("105") => "ok T:20.0 20.0 @0 B:20.0 30.0 @255"
+      case MCmd("114") => "ok C: X100 Y100 Z100 E0"
+      case MCmd(_) => "ok"
+      case "{sr:{}}" => "{r:{}}"
+      case other => "unknown command"
+    }
+  }
   def withFixture(test: OneArgTest) = {
-      withFixture(test.toNoArgTest(new Printer(new PortStub(),G2Response(_)))) // "loan" the fixture to the test
+    semaphore = new Semaphore(0)
+    withFixture(test.toNoArgTest(new Printer(new PortStub(smoothie _,"Smoothie"), SmoothieResponse(_)))) // "loan" the fixture to the test
   }
 
   def startAndWait(p: Printer) = {
     @volatile
     var connected = false
+    p.addReceiveListener{ (src,resp) => println(s"Received $resp to request from $src") }
     p.addStateListener {
       case Port.Connected(_, _) => connected = true
       case Port.Disconnected => connected = false
@@ -35,31 +55,44 @@ override val defaultTestSignaler = ThreadSignaler
       assert(connected === true)
     }
   }
-  val dataStream = Stream.from(1).map { n => GCommand(s"G0 X$n Y$n",Source.Console) }
-  val commandStream = Stream.from(1).map { n => s"{sr:{}}" }
+  
+  val dataStream = Stream.from(1).map { n => GCommand(s"G0 X$n Y$n", Source.Console) }
+  val commandStream = Stream.from(1).map { n => "{sr:{}}" }
+  
   "Printer" should "set connected on connect" in { p =>
     startAndWait(p)
   }
   it should "send data with back pressure" in { p =>
     startAndWait(p)
-    val start = System.currentTimeMillis()
-    dataStream.take(99).foreach(p.sendData)
-    assert((System.currentTimeMillis() - start) > 50)
+    Future(dataStream.take(20).foreach(p.sendData))
+    Thread.sleep(150)
+    assert(p.commandsStack.size === 4)
+    semaphore.release(5)
+    Thread.sleep(150)
+    assert(p.commandsStack.size === 4)
+    semaphore.release(13)
+    Thread.sleep(150)
+    assert(p.commandsStack.size === 2)
+    semaphore.release(10)
+    Thread.sleep(150)
+    assert(p.commandsStack.size === 0)
   }
+  
   it should "send commands immediately" in { p =>
     startAndWait(p)
-    val data = Future(dataStream.take(50).foreach(p.sendData))
+    semaphore.release(105)
+    val data = Future(Stream.from(1).map { n => GCommand(s"X$n Y$n", Source.Console) }.take(50).foreach(p.sendData _) )
     val start = System.currentTimeMillis()
     commandStream.take(50).foreach(p.sendLine)
     assert((System.currentTimeMillis() - start) < 20)
-    Await.ready(data, 200.milli)
-    assert((System.currentTimeMillis() - start) > 50)
   }
+  
   it should "receive responses" in { p =>
     val received = new CopyOnWriteArrayList[String]
-    p.addReceiveListener{ (s,r) => received.add(r.rawLine)}
+    p.addReceiveListener { (s, r) => received.add(r.rawLine) }
+    semaphore.release(105)
     startAndWait(p)
-    val data = Future(dataStream.take(100).foreach(p.sendData))
-    eventually(received.size === 100)
+    val data = Future(dataStream.take(60).foreach(p.sendData))
+    eventually(timeout(timeLimit))(assert(received.size >= 60))
   }
 }

@@ -23,7 +23,7 @@ object ReactiveOps { self =>
     def flatMap[B](f: A => Traversable[B]) = self.transform(pub,self.flatMap(f))
     def map[B](f: A => B) = self.transform(pub, self.map(f))
     def collect[B](pf: PartialFunction[A,B]) = self.transform(pub, self.collect(pf))
-    def merge(p: Publisher[A] *): Publisher[A] = self.merge(p: _*)
+    def merge(p: Publisher[A] *): Publisher[A] = self.merge((pub +: p): _*)
     def fork: Publisher[A] = self.transform(pub, new Fork[A])
     def transform[B](proc: Processor[A, B]): Publisher[B] = self.transform(pub, proc)
   }

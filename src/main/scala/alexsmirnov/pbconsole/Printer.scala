@@ -10,6 +10,7 @@ import alexsmirnov.pbconsole.serial._
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import scala.collection.immutable.Queue
+import org.reactivestreams.Processor
 
 /**
  * @author asmirnov
@@ -25,7 +26,7 @@ object Printer {
     new Printer(port, SmoothieResponse(_))
   }
 }
-class Printer(port: Port, responseParser: String => Response) {
+class Printer(port: Port, responseParser: String => Response,queueSize: Int = 4) {
 
   def start() {
     port.run()
@@ -40,12 +41,25 @@ class Printer(port: Port, responseParser: String => Response) {
 
   var commandsStack: Queue[CommandRequest] = Queue.empty
 
-  val linemode = new ProcessorBase[Request, Request](4) {
+  val linemode = new Processor[Request,Request] with PublisherBase[Request] with SubscriberBase[Request] {
+    def clearStack() { this.synchronized(commandsStack = Queue.empty) }
+    def onStart() { clearStack();request(queueSize) }
+    def onStop() { cancel();clearStack() }
+
+    def onComplete() = {
+      sendComplete()
+      clearStack()
+    }
+    
+    def onError(t: Throwable) {
+      stopProducer()
+      sendError(t)
+      clearStack()
+    }
     def onNext(r: Request) {
       r match {
         case cr: CommandRequest =>
-          this.synchronized(
-            commandsStack = commandsStack.enqueue(cr))
+          this.synchronized(commandsStack = commandsStack.enqueue(cr))
           sendNext(r)
         case _ =>
           sendNext(r)
@@ -82,7 +96,7 @@ class Printer(port: Port, responseParser: String => Response) {
   lines.map(_.line).transform(linesToBytes).subscribe(port)
 
   // input pipeline
-  val responses = port.transform(toLines).map(responseParser(_)).transform(barrier)
+  val responses = port.transform(toLines).map(responseParser(_)).transform(barrier).fork
 
   def addStateListener(l: Port.StateEvent => Unit) = port.addStateListener(l)
 

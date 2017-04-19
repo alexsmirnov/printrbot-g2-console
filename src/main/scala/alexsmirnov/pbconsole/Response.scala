@@ -30,4 +30,10 @@ case class PositionY(value: Float) extends ResponseValue
 case class PositionZ(value: Float) extends ResponseValue
 case class PositionE(value: Float) extends ResponseValue
 
+case class EmptyCommandResponse(rawLine: String, isError: Boolean = false) extends CommandResponse
+case class HaltedResponse(rawLine: String) extends CommandResponse {
+    def isError: Boolean = true
+}
+case class CommandResponseWithStatus(rawLine: String, values: List[ResponseValue], isError: Boolean = false) extends StatusResponse with CommandResponse
+case class StatusOnlyResponse(rawLine: String, values: List[ResponseValue]) extends StatusResponse
 case class UnknownResponse(rawLine: String) extends Response

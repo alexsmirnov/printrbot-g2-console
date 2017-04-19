@@ -4,16 +4,16 @@ import alexsmirnov.stream.ReactiveOps._
 import org.reactivestreams._
 import java.util.concurrent.TimeUnit
 
-class PortStub extends Port {
+object PortStub {
+  def g2(line: String) = """{"r":{"foo":"bar"},"f":[1,0,8]}"""
+  val g2welcome = """{"r":{"sr":{"state":"READY"}},"f":[1,0,8]}"""
+}
+
+class PortStub(tr: String => String = PortStub.g2, welcome: => String = PortStub.g2welcome) extends Port {
  
     val receiver = toLines
-    val processor = map[String,String]{ line =>
-      Thread.sleep(1)
-      """{"r":{"foo":"bar"},"f":[1,0,8]}"""
-    }
-    val asyncReceiver = transform(receiver, async[String]())
     val responser = linesToBytes
-    transform(asyncReceiver,processor).subscribe(responser)
+    receiver.async(100).map(tr).subscribe(responser)
     
     var listeners:List[Port.StateEvent => Unit] = Nil
 
@@ -29,7 +29,7 @@ class PortStub extends Port {
         receiver.request(100L)
         responser.request(100L)
         responser.requestProducer(100)
-        processor.sendNext("""{"r":{"sr":{"state":"READY"}},"f":[1,0,8]}""")
+        responser.onNext(welcome)
       }
     }, 10, TimeUnit.MILLISECONDS)
   }

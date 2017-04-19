@@ -25,6 +25,7 @@ class PrinterModel(val printer: Printer) {
   def addReceiveListener(listener: Response => Unit) = {
     printer.addReceiveListener {(s,l) =>runInFxThread(listener(l))}
   }
+  
   def addSendListener(listener: String => Unit) = {
     printer.addSendListener {l =>runInFxThread(listener(l.line))}
   }

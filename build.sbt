@@ -14,6 +14,7 @@ libraryDependencies += "com.neuronrobotics" % "nrjavaserial" % "3.12.1"
 libraryDependencies += "org.json4s" %% "json4s-native" % "3.5.0"
 // https://mvnrepository.com/artifact/org.reactivestreams/reactive-streams
 libraryDependencies += "org.reactivestreams" % "reactive-streams" % "1.0.0.final"
+libraryDependencies += "org.typelevel" %% "cats" % "0.9.0"
 libraryDependencies += "org.scalatest" % "scalatest_2.11" % "3.0.1" % "test"
 libraryDependencies += "org.mockito" % "mockito-core" % "2.7.1"
 libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
