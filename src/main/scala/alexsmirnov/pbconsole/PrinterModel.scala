@@ -6,21 +6,64 @@ import scalafx.beans.property.IntegerProperty
 import scalafx.beans.property.StringProperty
 import alexsmirnov.pbconsole.serial.Port
 import scalafx.beans.binding.StringBinding
+import scala.concurrent.Future
+import scala.concurrent.Promise
+import scalafx.beans.property.FloatProperty
+import scalafx.beans.property.DoubleProperty
 
-class PrinterModel(val printer: Printer) {
+object PrinterModel {
+  class Heater {
+    val temperature = FloatProperty(0.0f)
+    val target = FloatProperty(0.0f)
+    val output = IntegerProperty(0)
+  }
+  class Position {
+    val x = DoubleProperty(0.0)
+    val y = DoubleProperty(0.0)
+    val z = DoubleProperty(0.0)
+    val extruder = DoubleProperty(0.0)
+  }
+}
+class PrinterModel(printer: Printer) {
+  import PrinterModel._
+  // Current status
   val connected = BooleanProperty(false)
   val speed = IntegerProperty(0)
   val port = StringProperty("")
   
+  val extruder = new Heater
+  val bed = new Heater
+  val position = new Position
+  val relativePositioning = BooleanProperty(false)
+  val extruderRelativePositioning = BooleanProperty(false)
+  
   val status = when(connected) choose(port.zip(speed).map[String,StringBinding] { n => s"Connected to ${n._1} at ${n._2}" }) otherwise("Disconnected")
   
   printer.addStateListener(connected.asListener { 
-    case Port.Connected(name,baud) => speed() = baud;port() = name; true
+    case Port.Connected(name,baud) => speed() = baud;port() = name; relativePositioning() = false;extruderRelativePositioning() = false;true
     case Port.Disconnected => false
   })
 
+  private def setPositioning(line: String) = line.trim match {
+    case Request.GCmd("90") => relativePositioning() = false; extruderRelativePositioning() = false
+    case Request.GCmd("91") => relativePositioning() = true; extruderRelativePositioning() = true
+    case Request.MCmd("82") => extruderRelativePositioning() = false
+    case Request.MCmd("83") => extruderRelativePositioning() = true
+    case _ => ()
+  }
   def sendLine(line: String,src: Source): Unit = {
+    setPositioning(line)
     printer.sendData(Request(line,src))
+  }
+  
+  def sendQuery(query: String,src: Source): Future[List[ResponseValue]] = {
+    setPositioning(query)
+    val promise = Promise[List[ResponseValue]]
+    printer.sendData(QueryCommand(query,src,{
+      case sr: StatusResponse => promise.success(sr.values)
+      case other => promise.failure(new Throwable(s"unexpected response $other"))
+    }))
+    promise.future
   }
 
   def addReceiveListener(listener: (Source,String) => Unit) = {

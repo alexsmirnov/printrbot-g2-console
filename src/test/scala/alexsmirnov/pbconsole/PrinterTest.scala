@@ -33,10 +33,10 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
     val printer = new Printer(new PortStub({ line: String =>
       semaphore.acquire()
       line match {
-        case PortStub.GCmd(n) => Seq("ok " + n)
-        case PortStub.MCmd("105") => Seq("ok T:20.0 /20.0 @0 B:20.0 /30.0 @255")
-        case PortStub.MCmd("114") => Seq("ok C: X100 Y100 Z100 E0")
-        case PortStub.MCmd(_) => Seq("ok")
+        case Request.GCmd(n) => Seq("ok " + n)
+        case Request.MCmd("105") => Seq("ok T:20.0 /20.0 @0 B:20.0 /30.0 @255")
+        case Request.MCmd("114") => Seq("ok C: X100 Y100 Z100 E0")
+        case Request.MCmd(_) => Seq("ok")
         case "{sr:{}}" => Seq("{r:{}}")
         case other => Seq("unknown command")
       }

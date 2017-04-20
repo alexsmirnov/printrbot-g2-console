@@ -4,12 +4,11 @@ import alexsmirnov.stream.ReactiveOps._
 import org.reactivestreams._
 import java.util.concurrent.TimeUnit
 import scala.util.Random
+import alexsmirnov.pbconsole.Request
 
 object PortStub {
   def g2(line: String) = Seq("""{"r":{"foo":"bar"},"f":[1,0,8]}""")
   val g2welcome = """{"r":{"sr":{"state":"READY"}},"f":[1,0,8]}"""
-  val GCmd = """^[Gg](\d+).*""".r
-  val MCmd = """^[Mm](\d+).*""".r
   val SetTempCmd = """^[Mm]104\s*S(\d+)""".r
   val SetBedTempCmd = """^[Mm]140\s*S(\d+)""".r
   @volatile var extrudertemp: Float = 20.0f
@@ -34,7 +33,7 @@ object PortStub {
   }, 100, 100, TimeUnit.MILLISECONDS)
   def smoothie(line: String) = {
     line match {
-      case GCmd(n) => Seq("ok")
+      case Request.GCmd(n) => Seq("ok")
       case SetTempCmd(t) =>
         if (!heater.isCancelled) {
           extruderTarget = t.toFloat
@@ -45,10 +44,10 @@ object PortStub {
           bedTarget = t.toFloat
         }
         Seq("ok")
-      case MCmd("105") =>
+      case Request.MCmd("105") =>
         Seq(s"ok T:$extrudertemp /$extruderTarget @$extruderOut B:$bedtemp /$bedTarget @$bedOut")
-      case MCmd("114") => Seq("ok C: X100 Y100 Z100 E0")
-      case MCmd(_) => Seq("ok")
+      case Request.MCmd("114") => Seq("ok C: X100 Y100 Z100 E0")
+      case Request.MCmd(_) => Seq("ok")
       case "{sr:{}}" => Seq("{r:{}}")
       case other => Seq("unknown command")
     }

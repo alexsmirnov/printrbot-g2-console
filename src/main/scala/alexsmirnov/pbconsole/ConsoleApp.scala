@@ -61,16 +61,15 @@ import scalafx.scene.control.TitledPane
  */
 object ConsoleApp extends JFXApp {
 
-  val console = new Console()
   
-  val printerControl = new PrinterControl
 
   val printer = Printer(parameters.named)
 
   
   val printerModel = new PrinterModel(printer)
   
-  console.bind(printerModel)
+  val console = new Console(printerModel)
+  val printerControl = new PrinterControl(printerModel)
 
   stage = new PrimaryStage {
     width = 1000

@@ -6,8 +6,11 @@ sealed trait Request {
 }
 
 object Request {
+  val GCmd = """^[Gg](\d+).*""".r
+  val MCmd = """^[Mm](\d+).*""".r
   val GCode = """^([GgMm])(\d+)\s*(.*)""".r
-  def apply(line: String, source: Source): Request = line match {
+  def apply(line: String, source: Source): Request = line.trim() match {
+    case "" => GCommand(line,source) // empty line cases 'ok' response
     case GCode(cmd,n,params) => GCommand(line,source)
     case other => PlainTextRequest(line,source)
   }

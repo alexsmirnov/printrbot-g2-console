@@ -1,6 +1,5 @@
 package alexsmirnov.pbconsole
 
-import alexsmirnov.pbconsole.ObservableValueOps
 import scalafx.Includes.eventClosureWrapperWithParam
 import scalafx.Includes.jfxActionEvent2sfx
 import scalafx.Includes.jfxKeyEvent2sfx
@@ -41,16 +40,14 @@ object Console {
   }
 }
 /**
- * TODO: disable send if disconnected.
  * @author asmirnov
  *
  */
-class Console { console =>
+class Console(printer: PrinterModel) { console =>
 
   val buffer = ObservableBuffer.empty[Console.Msg]
-  var listener: Option[(String => Unit)] = None
   val enabled = BooleanProperty(false)
-  val debug = BooleanProperty(false)
+  val debug = BooleanProperty(true)
   var history: List[String] = Nil
 
   val node: Node = {
@@ -108,7 +105,7 @@ class Console { console =>
             }
           }
           def send {
-            listener.foreach(_(input.text()))
+            printer.sendLine(input.text(), Source.Console)
             history = input.text() :: history
             currentHistory = 0
             input.clear()
@@ -143,13 +140,8 @@ class Console { console =>
     }
   }
 
-  def onAction(f: String => Unit) { listener = Some(f) }
-
-  def bind(printer: PrinterModel) {
-    enabled <== printer.connected
-    onAction(printer.sendLine(_, Source.Console))
-    printer.addReceiveListener(addInput)
-    printer.addSendListener(addOutput)
-  }
+  enabled <== printer.connected
+  printer.addReceiveListener(addInput)
+  printer.addSendListener(addOutput)
 }
 
