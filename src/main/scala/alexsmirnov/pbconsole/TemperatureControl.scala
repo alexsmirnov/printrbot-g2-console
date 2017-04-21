@@ -98,10 +98,11 @@ class TemperatureControl(printer: PrinterModel) {
   chart.createSymbols = false
 
   def tempControl(title: String, heater: PrinterModel.Heater, command: Float => String): Node = {
-    val temperatureValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(0,300,0,5)
-    val temperature = new Spinner[Integer]{
+    val temperatureValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 300, 0, 5)
+    val temperature = new Spinner[Integer] {
       editable = true
       valueFactory = temperatureValueFactory
+      disable <== printer.connected.not()
     }
     new BorderPane {
       top = new Text(title)
@@ -123,16 +124,17 @@ class TemperatureControl(printer: PrinterModel) {
           new Button {
             text = "Off"
             onAction = { ae: ActionEvent => printer.sendLine(command(0), Source.Monitor) }
+            disable <== printer.connected.not()
           },
           temperature,
           new Button {
             text = "Set"
-            onAction = { ae: ActionEvent => 
+            disable <== printer.connected.not()
+            onAction = { ae: ActionEvent =>
               temperature.increment(0)
               printer.sendLine(command(temperature.value().toFloat), Source.Monitor)
-              }
-          }
-          )
+            }
+          })
       }
     }
   }
