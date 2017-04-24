@@ -26,6 +26,7 @@ import scalafx.scene.layout.Priority
 import scalafx.scene.layout.VBox
 import scalafx.scene.paint.Color
 import scalafx.scene.paint.Color.sfxColor2jfx
+import scalafx.scene.control.CheckBox
 
 object Console {
 
@@ -46,16 +47,21 @@ object Console {
 class Console(printer: PrinterModel) { console =>
 
   val buffer = ObservableBuffer.empty[Console.Msg]
-  val enabled = BooleanProperty(false)
-  val debug = BooleanProperty(true)
+  val disabled = BooleanProperty(false)
+  val debug = BooleanProperty(false)
   var history: List[String] = Nil
 
   val node: Node = {
     new VBox {
       vgrow = Priority.Always
       hgrow = Priority.Always
-      padding = Insets(5)
+      padding = Insets(2)
       children = List(
+          new CheckBox {
+            margin = Insets(5)
+            text = "Debud output"
+            selected <==> debug
+          },
         new ListView[Console.Msg](buffer) {
           vgrow = Priority.Always
           hgrow = Priority.Always
@@ -114,14 +120,14 @@ class Console(printer: PrinterModel) { console =>
           val input = new TextField {
             hgrow = Priority.Always
             onAction = { ae: ActionEvent => send }
-            disable <== console.enabled.not
+            disable <== console.disabled
           }
           children = List(
             input,
             new Button {
               text = "Send"
               onAction = { ae: ActionEvent => send }
-              disable <== console.enabled.not
+              disable <== console.disabled
             })
         })
     }
@@ -140,7 +146,7 @@ class Console(printer: PrinterModel) { console =>
     }
   }
 
-  enabled <== printer.connected
+  disabled <== printer.connected.not
   printer.addReceiveListener(addInput)
   printer.addSendListener(addOutput)
 }

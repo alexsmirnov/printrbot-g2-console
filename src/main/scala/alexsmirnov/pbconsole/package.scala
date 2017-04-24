@@ -15,14 +15,15 @@ package object pbconsole {
   implicit object BooleanBind extends BindingBuilder[Boolean,BooleanBinding]{
     def createBinding(f: () => Boolean,deps: Observable*) = createBooleanBinding(f, deps: _*)
   }
+  
+  implicit def ObjectBind[T <: AnyRef ]: BindingBuilder[T,ObjectBinding[T]] = new BindingBuilder[T,ObjectBinding[T]] {
+    def createBinding(f: () => T,deps: Observable*) = createObjectBinding(f, deps: _*)
+  }
  
   implicit object StringBind extends BindingBuilder[String,StringBinding]{
     def createBinding(f: () => String,deps: Observable*) = createStringBinding(f, deps: _*)
   }
  
-  implicit def ObjectBind[T <: AnyRef ]: BindingBuilder[T,ObjectBinding[T]] = new BindingBuilder[T,ObjectBinding[T]] {
-    def createBinding(f: () => T,deps: Observable*) = createObjectBinding(f, deps: _*)
-  }
  
   implicit object IntegerBind extends BindingBuilder[Int,IntegerBinding]{
     def createBinding(f: () => Int,deps: Observable*) = createIntegerBinding(f, deps: _*)

@@ -12,6 +12,9 @@ import scalafx.event.ActionEvent
 import scalafx.collections.ObservableMap
 import scalafx.collections.ObservableBuffer
 import scalafx.scene.layout.FlowPane
+import scalafx.geometry.Insets
+import javafx.scene.layout.Priority
+import scalafx.geometry.Pos
 
 class Jogger(printer: PrinterModel) {
 
@@ -63,6 +66,11 @@ class Jogger(printer: PrinterModel) {
     grid.add(macroButton("Home Y", "G28 Y0"), 1, steps.size * 2 + 1, 2, 1)
     grid.add(macroButton("Home XY", "G28 X0 Y0"), steps.size * 2, 1, 2, 1)
     grid.add(macroButton("Motors Off", "M84"), steps.size * 2, steps.size * 2 + 1, 2, 1)
+    grid.alignment = Pos.Center
+    // visual effects
+    grid.hgap = 5.0
+    grid.vgap = 5.0
+    grid.padding = Insets(5)
     grid
   }
 
@@ -75,8 +83,12 @@ class Jogger(printer: PrinterModel) {
     "G0X50Y100Z40F5000"))
   def controls = macros.map { case (name,commands) => macroButton(name, commands: _*) }
   val node: Node = new BorderPane {
+    padding = Insets(10)
     center = xyJogger
     right = new VBox {
+      spacing = 5
+      padding = Insets(5)
+      alignment = Pos.Center
       children = new Label("Z") +: allSteps.reverse.map {
         case (label, index) =>
           moveButton(label, moveZ)
@@ -84,12 +96,18 @@ class Jogger(printer: PrinterModel) {
     }
     bottom = new VBox {
       children = List(new HBox {
+        vgrow = Priority.NEVER
+        alignment = Pos.Center
+        spacing = 5
+        padding = Insets(5)
         children = new Label("Extruder") +: allSteps.map {
           case (label, index) =>
             moveButton(label, moveE)
         }
       },
       new FlowPane {
+        padding = Insets(10)
+        spacing = 10
         children = controls
       })
     }

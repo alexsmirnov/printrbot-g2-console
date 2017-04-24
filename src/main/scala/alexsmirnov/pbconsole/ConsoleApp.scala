@@ -62,6 +62,7 @@ import scalafx.scene.control.TitledPane
 object ConsoleApp extends JFXApp {
 
   
+  val settings = new Settings()
 
   val printer = Printer(parameters.named)
 
@@ -70,6 +71,7 @@ object ConsoleApp extends JFXApp {
   
   val console = new Console(printerModel)
   val printerControl = new PrinterControl(printerModel)
+  val job = new Job(printerModel,settings)
 
   stage = new PrimaryStage {
     width = 1000
@@ -116,7 +118,7 @@ object ConsoleApp extends JFXApp {
         new TitledPane {
           text = "Print"
 //          closable = false
-          //                content = printPage
+          content = job.node
         },
           new TitledPane {
           hgrow = Priority.Always
