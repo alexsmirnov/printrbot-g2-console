@@ -68,7 +68,7 @@ class Printer(port: Port, responseParser: String => Response,queueSize: Int = 4)
     }
 
   }
-  val barrier = new ProcessorBase[Response, (Source, Response)]() {
+  val barrier = new ProcessorBase[Response, (CommandSource, Response)]() {
 
     def onNext(resp: Response) {
       val source = resp match {
@@ -83,7 +83,7 @@ class Printer(port: Port, responseParser: String => Response,queueSize: Int = 4)
           command.source
         }
       }
-      sendNext(source.getOrElse(Source.Unknown) -> resp)
+      sendNext(source.getOrElse(CommandSource.Unknown) -> resp)
       request(1L)
     }
   }
@@ -100,11 +100,11 @@ class Printer(port: Port, responseParser: String => Response,queueSize: Int = 4)
 
   def addStateListener(l: Port.StateEvent => Unit) = port.addStateListener(l)
 
-  def sendLine(line: String): Unit = { commands.sendNext(PlainTextRequest(line, Source.Console)) }
+  def sendLine(line: String): Unit = { commands.sendNext(PlainTextRequest(line, CommandSource.Console)) }
 
   def sendData(dataLine: Request): Unit = data.sendNext(dataLine)
 
-  def addReceiveListener(r: (Source, Response) => Unit): Unit = responses.subscribe(listener({ case (s, resp) => r(s, resp) }))
+  def addReceiveListener(r: (CommandSource, Response) => Unit): Unit = responses.subscribe(listener({ case (s, resp) => r(s, resp) }))
 
   def addSendListener(l: Request => Unit): Unit = lines.subscribe(listener(l))
 

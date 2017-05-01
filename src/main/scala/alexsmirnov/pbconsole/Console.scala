@@ -111,7 +111,7 @@ class Console(printer: PrinterModel) { console =>
             }
           }
           def send {
-            printer.sendLine(input.text(), Source.Console)
+            printer.sendLine(input.text(), CommandSource.Console)
             history = input.text() :: history
             currentHistory = 0
             input.clear()
@@ -133,14 +133,14 @@ class Console(printer: PrinterModel) { console =>
     }
   }
 
-  def isConsoleSource(src: Source) = debug.value || src == Source.Console || src == Source.Unknown
-  def addInput(src: Source, line: String) {
+  def isConsoleSource(src: CommandSource) = debug.value || src == CommandSource.Console || src == CommandSource.Unknown
+  def addInput(src: CommandSource, line: String) {
     if (isConsoleSource(src)) {
       buffer += Console.In(line)
     }
   }
 
-  def addOutput(src: Source, line: String) {
+  def addOutput(src: CommandSource, line: String) {
     if (isConsoleSource(src)) {
       buffer += Console.Out(line)
     }

@@ -27,23 +27,23 @@ class Jogger(printer: PrinterModel) {
   def macroButton(label: String, commands: String*): Node = new Button(label) {
     minWidth = 45
     minHeight = 45
-    onAction = { ae: ActionEvent => commands.foreach(printer.sendLine(_, Source.Monitor)) }
+    onAction = { ae: ActionEvent => commands.foreach(printer.sendLine(_, CommandSource.Monitor)) }
     disable <== printer.connected.not()
   }
   def move(axis: String, distance: String) {
     val relative: Boolean = printer.relativePositioning()
-    if (!relative) printer.sendLine("G91", Source.Monitor)
-    printer.sendLine("G0 " + axis + distance, Source.Monitor)
-    if (!relative) printer.sendLine("G90", Source.Monitor)
+    if (!relative) printer.sendLine("G91", CommandSource.Monitor)
+    printer.sendLine("G0 " + axis + distance, CommandSource.Monitor)
+    if (!relative) printer.sendLine("G90", CommandSource.Monitor)
   }
   def moveX(distance: String): Unit = move("X", distance)
   def moveY(distance: String): Unit = move("Y", distance)
   def moveZ(distance: String): Unit = move("Z", distance)
   def moveE(distance: String): Unit = {
     val relative: Boolean = printer.extruderRelativePositioning()
-    if (!relative) printer.sendLine("M83", Source.Monitor)
-    printer.sendLine("G0 E" + distance, Source.Monitor)
-    if (!relative) printer.sendLine("M82", Source.Monitor)
+    if (!relative) printer.sendLine("M83", CommandSource.Monitor)
+    printer.sendLine("G0 E" + distance, CommandSource.Monitor)
+    if (!relative) printer.sendLine("M82", CommandSource.Monitor)
   }
   val steps = List("0.1", "1", "10")
   val allSteps = steps.reverse.map("-" + _).zipWithIndex ++: (steps.zipWithIndex.map { case (t, n) => t -> (n + steps.size + 1) })

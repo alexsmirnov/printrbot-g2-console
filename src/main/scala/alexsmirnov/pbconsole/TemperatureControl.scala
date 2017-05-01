@@ -65,7 +65,7 @@ class TemperatureControl(printer: PrinterModel) {
     series("Bed target", bedTargetData))
 
   val scheduler = {
-    val s = ScheduledService(Task { if (printer.connected()) Await.result(printer.sendQuery("M105", Source.Monitor), 5.seconds) else Nil })
+    val s = ScheduledService(Task { if (printer.connected()) Await.result(printer.sendQuery("M105", CommandSource.Monitor), 5.seconds) else Nil })
     s.period = FXDuration(2000.0)
     s.delay = FXDuration(2000.0)
     s.restartOnFailure = true
@@ -123,7 +123,7 @@ class TemperatureControl(printer: PrinterModel) {
         children = List(
           new Button {
             text = "Off"
-            onAction = { ae: ActionEvent => printer.sendLine(command(0), Source.Monitor) }
+            onAction = { ae: ActionEvent => printer.sendLine(command(0), CommandSource.Monitor) }
             disable <== printer.connected.not()
           },
           temperature,
@@ -132,7 +132,7 @@ class TemperatureControl(printer: PrinterModel) {
             disable <== printer.connected.not()
             onAction = { ae: ActionEvent =>
               temperature.increment(0)
-              printer.sendLine(command(temperature.value().toFloat), Source.Monitor)
+              printer.sendLine(command(temperature.value().toFloat), CommandSource.Monitor)
             }
           })
       }

@@ -51,12 +51,12 @@ class PrinterModel(printer: Printer) {
     case Request.MCmd("83") => extruderRelativePositioning() = true
     case _ => ()
   }
-  def sendLine(line: String,src: Source): Unit = {
+  def sendLine(line: String,src: CommandSource): Unit = {
     setPositioning(line)
     printer.sendData(Request(line,src))
   }
   
-  def sendQuery(query: String,src: Source): Future[List[ResponseValue]] = {
+  def sendQuery(query: String,src: CommandSource): Future[List[ResponseValue]] = {
     setPositioning(query)
     val promise = Promise[List[ResponseValue]]
     printer.sendData(QueryCommand(query,src,{
@@ -66,11 +66,11 @@ class PrinterModel(printer: Printer) {
     promise.future
   }
 
-  def addReceiveListener(listener: (Source,String) => Unit) = {
+  def addReceiveListener(listener: (CommandSource,String) => Unit) = {
     printer.addReceiveListener {(s,l) => runInFxThread(listener(s,l.rawLine))}
   }
   
-  def addSendListener(listener: (Source,String) => Unit) = {
+  def addSendListener(listener: (CommandSource,String) => Unit) = {
     printer.addSendListener {l => runInFxThread(listener(l.source,l.line))}
   }
 }

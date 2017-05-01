@@ -21,21 +21,35 @@ import scala.io.Codec
 object Job {
   val G0Cmd = """^\s*G0(\D.*)""".r
   val G1Cmd = """^\s*G1(\D.*)""".r
+  val G92Cmd = """^\s*G92(\D.*)""".r
   val MoveParams = """\s*([XYZABEF])(\d+\.?\d*)""".r
-  case class Position(x: Float, y: Float, z: Float, extruder: Float, speed: Float) {
-    def moveTo(move: Move) = new Position(x+move.x.getOrElse(0f),
-                                          y+move.y.getOrElse(0f),
-                                          z+move.z.getOrElse(0f),
-                                          extruder+move.extruder.getOrElse(0f),
-                                          move.speed.getOrElse(speed))
+  val NoComment = """^\s+([^;]+)\s*;?.*$""".r
+
+  def dist(from: Option[Float], to: Option[Float]): Float = from.flatMap { f => to.map(_ - f) }.getOrElse(0.0f)
+  case class Position(x: Option[Float], y: Option[Float], z: Option[Float], extruder: Option[Float], speed: Float) {
+    def moveTo(move: Move) = new Position(
+      move.x.orElse(x),
+      move.y.orElse(y),
+      move.z.orElse(z),
+      move.extruder.orElse(extruder),
+      move.speed.getOrElse(speed))
     def distance(next: Position) = {
-      val dx = x-next.x
-      val dy = y-next.y
-      val dz = z-next.z
-      math.sqrt(dx*dx+dy*dy+dz*dz)
+      val dx = dist(x, next.x)
+      val dy = dist(y, next.y)
+      val dz = dist(z, next.z)
+      math.sqrt(dx * dx + dy * dy + dz * dz).toFloat
     }
-    def travelTime(next: Position) = distance(next)/speed
+    def travelTime(next: Position) = {
+      val d = distance(next)
+      if (d > 0) d / next.speed else dist(extruder, next.extruder) / next.speed
+    }
   }
+
+  val UnknownPosition = Position(None, None, None, None, 1.0f)
+  sealed trait GCode {
+
+  }
+
   sealed trait Move {
     def x: Option[Float]
     def y: Option[Float]
@@ -43,18 +57,75 @@ object Job {
     def extruder: Option[Float]
     def speed: Option[Float]
   }
-  case class G0Move(x: Option[Float], y: Option[Float], z: Option[Float], extruder: Option[Float], speed: Option[Float]) extends Move
+  case class G0Move(x: Option[Float], y: Option[Float], z: Option[Float], extruder: Option[Float], speed: Option[Float]) extends Move with GCode
   object G0Move {
-    def apply(p: Map[Char,Float]) = new G0Move(p.get('X'),p.get('Y'),p.get('Z'),p.get('E').orElse(p.get('A')),p.get('F'))
+    def apply(p: Map[Char, Float]) = new G0Move(p.get('X'), p.get('Y'), p.get('Z'), p.get('E').orElse(p.get('A')), p.get('F'))
   }
-  case class G1Move(x: Option[Float], y: Option[Float], z: Option[Float], extruder: Option[Float], speed: Option[Float]) extends Move
+  case class G1Move(x: Option[Float], y: Option[Float], z: Option[Float], extruder: Option[Float], speed: Option[Float]) extends Move with GCode
   object G1Move {
-    def apply(p: Map[Char,Float]) = new G1Move(p.get('X'),p.get('Y'),p.get('Z'),p.get('E').orElse(p.get('A')),p.get('F'))
+    def apply(p: Map[Char, Float]) = new G1Move(p.get('X'), p.get('Y'), p.get('Z'), p.get('E').orElse(p.get('A')), p.get('F'))
   }
-}
+  case class G92SetPos(x: Option[Float], y: Option[Float], z: Option[Float], extruder: Option[Float]) extends Move with GCode {
+    val speed = None
+  }
+  object G92SetPos {
+    def apply(p: Map[Char, Float]) = new G92SetPos(p.get('X'), p.get('Y'), p.get('Z'), p.get('E').orElse(p.get('A')))
+  }
+  case class GCommand(command: String) extends GCode
+  case object EmptyCommand extends GCode
 
-class Job(printer: PrinterModel, settings: Settings) {
+  def parseParams(params: String) = MoveParams.findAllMatchIn(params).map { m => m.subgroups(0).head -> (m.subgroups(1).toFloat) }.toMap
 
+  def parse(line: String): GCode = line match {
+    case "" => EmptyCommand
+    case G0Cmd(params) => G0Move(parseParams(params))
+    case G1Cmd(params) => G1Move(parseParams(params))
+    case G92Cmd(params) => G92SetPos(parseParams(params))
+    case other => GCommand(other)
+  }
+
+  case class range(min: Float = Float.MaxValue, max: Float = Float.MinValue) {
+    def update(value: Option[Float]) = value map { v =>
+      val newMin = min.min(v)
+      val newMax = max.max(v)
+      range(newMin, newMax)
+    } getOrElse (this)
+  }
+
+  case class PrintStats(x: range,
+    y: range,
+    z: range,
+    extrude: Float,
+    printTimeSec: Float)
+
+  val EmptyStats = PrintStats(range(), range(), range(), 0f, 0L)
+  def estimatePrint(lines: Iterator[String]) = processProgram(lines) { (_, _, _) => () }
+  def processProgram(lines: Iterator[String])(callback: (String, Position, PrintStats) => Unit): PrintStats = {
+    lines.foldLeft((EmptyStats, UnknownPosition)) { (stp, line) =>
+      val strip = NoComment.findFirstMatchIn(line).map(_.subgroups(0)).getOrElse("")
+      val (currentStats, currentPosition) = stp
+      parse(line) match {
+        case EmptyCommand => stp
+        case move: G92SetPos =>
+          val nextPosition = currentPosition.moveTo(move)
+          callback(strip, nextPosition, currentStats)
+          (currentStats, nextPosition)
+        case move: Move =>
+          val nextPosition = currentPosition.moveTo(move)
+          val PrintStats(rangeX, rangeY, rangeZ, ex, time) = currentStats
+          val nextStats = PrintStats(rangeX.update(nextPosition.x),
+            rangeY.update(nextPosition.y),
+            rangeZ.update(nextPosition.z),
+            ex + dist(currentPosition.extruder, nextPosition.extruder),
+            time + currentPosition.travelTime(nextPosition))
+          callback(strip, nextPosition, nextStats)
+          (nextStats, nextPosition)
+        case other =>
+          callback(strip, currentPosition, currentStats)
+          stp
+      }
+    }._1
+  }
 
   val openGcodeDialog = new FileChooser {
     title = "Open Gcode File"
@@ -63,8 +134,14 @@ class Job(printer: PrinterModel, settings: Settings) {
       new ExtensionFilter("All Files", "*.*"))
   }
 
+}
+
+class Job(printer: PrinterModel, settings: Settings) {
+
   val gcodeFile = ObjectProperty[Option[File]](None)
+  val fileStats = ObjectProperty[Job.PrintStats](Job.EmptyStats)
   val noFile = BooleanProperty(true)
+
   noFile <== gcodeFile.map(_.isEmpty)
 
   val node: Node = new BorderPane {
@@ -83,9 +160,12 @@ class Job(printer: PrinterModel, settings: Settings) {
     }
   }
 
-  def selectFile() = Option(openGcodeDialog.showOpenDialog(node.scene().window()))
+  def selectFile() = Option(Job.openGcodeDialog.showOpenDialog(node.scene().window()))
 
   def processFile(file: File) {
     val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
+    val stats = Job.estimatePrint(src.getLines())
+    fileStats.update(stats)
   }
+  gcodeFile.onInvalidate(gcodeFile().foreach(processFile(_)))
 }

@@ -51,7 +51,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
   def startAndWait(p: Printer) = {
     @volatile
     var connected = false
-    val received = new CopyOnWriteArrayList[(Source,Response)]
+    val received = new CopyOnWriteArrayList[(CommandSource,Response)]
     p.addReceiveListener { (s, r) => received.add(s -> r) }
     p.addStateListener {
       case Port.Connected(_, _) => connected = true
@@ -64,7 +64,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
     received
   }
 
-  val dataStream = Stream.from(1).map { n => GCommand(s"G$n X$n Y$n", Source.Console) }
+  val dataStream = Stream.from(1).map { n => GCommand(s"G$n X$n Y$n", CommandSource.Console) }
   val commandStream = Stream.from(1).map { n => "{sr:{}}" }
 
   "Printer" should "set connected on connect" in { fp =>
@@ -93,7 +93,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
     val (semaphore, p) = fp
     startAndWait(p)
     semaphore.release(105)
-    val data = Future(Stream.from(1).map { n => GCommand(s"X$n Y$n", Source.Console) }.take(50).foreach(p.sendData _))
+    val data = Future(Stream.from(1).map { n => GCommand(s"X$n Y$n", CommandSource.Console) }.take(50).foreach(p.sendData _))
     val start = System.currentTimeMillis()
     commandStream.take(50).foreach(p.sendLine)
     assert((System.currentTimeMillis() - start) < 20)
@@ -111,7 +111,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
   it should "assign source to response" in { fp =>
     val (semaphore, p) = fp
     val received = startAndWait(p)
-    val sources = Seq[Source](Source.Console,Source.Job,Source.Monitor,Source.Job,Source.Monitor)
+    val sources = Seq[CommandSource](CommandSource.Console,CommandSource.Job,CommandSource.Monitor,CommandSource.Job,CommandSource.Monitor)
     semaphore.release(10)
     val data = Future(sources.map(Request("M1",_)).foreach(p.sendData))
     eventually(timeout(timeLimit))(assert(received.size > sources.size))
@@ -122,7 +122,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
     semaphore.release(10)
     val received = startAndWait(p)
     val responsePromise = Promise[List[ResponseValue]]()
-    p.sendData(QueryCommand("M105",Source.Monitor,{
+    p.sendData(QueryCommand("M105",CommandSource.Monitor,{
       case sr: StatusResponse => responsePromise.success(sr.values)
       case other => responsePromise.failure(new Throwable(s"unexpected response $other"))
     }))
