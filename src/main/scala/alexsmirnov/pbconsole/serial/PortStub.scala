@@ -9,8 +9,8 @@ import alexsmirnov.pbconsole.Request
 object PortStub {
   def g2(line: String) = Seq("""{"r":{"foo":"bar"},"f":[1,0,8]}""")
   val g2welcome = """{"r":{"sr":{"state":"READY"}},"f":[1,0,8]}"""
-  val SetTempCmd = """^[Mm]104\s*S(\d+)""".r
-  val SetBedTempCmd = """^[Mm]140\s*S(\d+)""".r
+  val SetTempCmd = """^M104\s*S(\d+\.?\d*)""".r
+  val SetBedTempCmd = """^M140\s*S(\d+\.?\d*)""".r
   @volatile var extrudertemp: Float = 20.0f
   @volatile var extruderTarget: Float = 20.0f
   def extruderOut = if (extrudertemp < extruderTarget) 255 else 0
