@@ -29,6 +29,8 @@ import scalafx.scene.layout.StackPane
 import scalafx.scene.shape.Rectangle
 import scalafx.scene.paint.Color
 import java.util.logging.Logger
+import scalafx.scene.control.ButtonBar
+import scalafx.scene.layout.Region
 
 object Job {
   val LOG = Logger.getLogger("alexsmirnov.pbconsole.print.Job")
@@ -39,7 +41,7 @@ object Job {
   val NoComment = """^\s+([^;]+)\s*;?.*$""".r
 
   def dist(from: Option[Float], to: Option[Float]): Float = from.flatMap { f => to.map(_ - f) }.getOrElse(0.0f)
-  
+
   case class Position(x: Option[Float], y: Option[Float], z: Option[Float], extruder: Option[Float], speed: Float) {
     def moveTo(move: Move) = new Position(
       move.x.orElse(x),
@@ -158,62 +160,74 @@ class Job(printer: PrinterModel, job: JobModel, settings: Settings) {
       padding = Insets(18)
       gridLinesVisible = true
     }
-    grid.addRow(0, new Separator(),statLabel("Size"),statLabel("Min"),statLabel("Max"))
-    grid.addRow(1,statRange("X", job.fileStats.map { s => s.x }): _*)
-    grid.addRow(2,statRange("Y", job.fileStats.map { s => s.y }): _*)
-    grid.addRow(3,statRange("Z", job.fileStats.map { s => s.z }): _*)
-    grid.addRow(5,statLabel("Filanment"), floatOut(job.fileStats.map { s => s.extrude }))
-    grid.addRow(6,statLabel("Time"), floatOut(job.fileStats.map { s => s.printTimeMinutes }))
+    grid.addRow(0, new Separator(), statLabel("Size"), statLabel("Min"), statLabel("Max"))
+    grid.addRow(1, statRange("X", job.fileStats.map { s => s.x }): _*)
+    grid.addRow(2, statRange("Y", job.fileStats.map { s => s.y }): _*)
+    grid.addRow(3, statRange("Z", job.fileStats.map { s => s.z }): _*)
+    grid.addRow(5, statLabel("Filanment"), floatOut(job.fileStats.map { s => s.extrude }))
+    grid.addRow(6, statLabel("Time"), floatOut(job.fileStats.map { s => s.printTimeMinutes }))
     grid
   }
-  
+
   val canvas = new Canvas() {
-            width <== settings.bedWidth.add(10)
-            height <== settings.bedDepth.add(10)
+    width <== settings.bedWidth.add(10)
+    height <== settings.bedDepth.add(10)
   }
-  
+
   val bedImage = new StackPane {
     padding = Insets(10)
     children = List(
-          new Rectangle {
-            width <== settings.bedWidth
-            height <== settings.bedDepth
-            fill = Color.Aqua
-          },
-          canvas
-        )
+      new Rectangle {
+        width <== settings.bedWidth
+        height <== settings.bedDepth
+        fill = Color.Aqua
+      },
+      canvas)
   }
 
   val node: Node = new BorderPane {
     top = new HBox {
       hgrow = Priority.Always
       children = List(
-        new Label("File name:"),
+        new ButtonBar {
+          buttons = List(new Button("Open") {
+            onAction = { ae: ActionEvent => job.gcodeFile.update(selectFile()) }
+          },new Button() {
+            text <== when(job.jobActive) choose("Cancel Print") otherwise("Print")
+            disable <== job.noFile
+            onAction = { ae: ActionEvent => () }
+          },new Button() {
+            text <== when(job.jobPaused) choose("Continue") otherwise("Pause")
+            disable <== job.jobActive.not()
+            onAction = { ae: ActionEvent => () }
+          })
+        },
+        new Region {
+          hgrow = Priority.Always
+        },
+        new Label("File :"),
         new Separator(),
         new Label {
+            alignment = Pos.BaselineRight
           minWidth = 100
           text <== job.gcodeFile.map { _.map(_.getName).getOrElse("") }
         },
-        new Separator(),
-        new Button("Open") {
-          alignment = Pos.BaselineRight
-          onAction = { ae: ActionEvent => job.gcodeFile.update(selectFile()) }
-        })
+        new Separator())
     }
     right = stats
     center = bedImage
   }
-  
+
   def statLabel(txt: String) = new Label(txt)
   def floatOut(value: NumberBinding): Node = new Text() {
-    text <== value.map { r=>"%6.2f".format(r) }
+    text <== value.map { r => "%6.2f".format(r) }
   }
-  
-  def statRange(lbl: String,range: ObjectBinding[Job.range]): Seq[javafx.scene.Node] = {
+
+  def statRange(lbl: String, range: ObjectBinding[Job.range]): Seq[javafx.scene.Node] = {
     val min = floatOut(range.map { _.min })
     val max = floatOut(range.map { _.max })
     val size = floatOut(range.map { _.size })
-    Seq(statLabel(lbl),size,min,max)
+    Seq(statLabel(lbl), size, min, max)
   }
 
   def selectFile() = Option(Job.openGcodeDialog.showOpenDialog(node.scene().window()))
@@ -225,14 +239,14 @@ class Job(printer: PrinterModel, job: JobModel, settings: Settings) {
     gc.lineWidth = 2.0
     gc.stroke = Color.Red
     var lastPos = Job.UnknownPosition
-    val stats = Job.processProgram(src.getLines()){ (_,pos,_) =>
-      if(lastPos.x.isDefined && lastPos.y.isDefined){
-        pos.x.zip(pos.y).foreach{
-          case (x,y) => gc.strokeLine(lastPos.x.get,lastPos.y.get,x, y)
+    val stats = Job.processProgram(src.getLines()) { (_, pos, _) =>
+      if (lastPos.x.isDefined && lastPos.y.isDefined) {
+        pos.x.zip(pos.y).foreach {
+          case (x, y) => gc.strokeLine(lastPos.x.get, lastPos.y.get, x, y)
         }
       } else {
-        pos.x.zip(pos.y).foreach{
-          case (x,y) => gc.moveTo(x, y)
+        pos.x.zip(pos.y).foreach {
+          case (x, y) => gc.moveTo(x, y)
         }
       }
       lastPos = pos
