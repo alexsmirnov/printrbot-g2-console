@@ -53,6 +53,8 @@ import alexsmirnov.pbconsole.serial.Port
 import scalafx.application.Platform
 import scalafx.scene.control.Accordion
 import scalafx.scene.control.TitledPane
+import alexsmirnov.pbconsole.print.Job
+import alexsmirnov.pbconsole.print.JobModel
 
 /**
  * TODO: reconnect button, status from {sr:...}, movement control
@@ -71,7 +73,8 @@ object ConsoleApp extends JFXApp {
   
   val console = new Console(printerModel)
   val printerControl = new PrinterControl(printerModel)
-  val job = new Job(printerModel,settings)
+  val jobModel = new JobModel
+  val job = new Job(printerModel,jobModel,settings)
 
   stage = new PrimaryStage {
     width = 1000

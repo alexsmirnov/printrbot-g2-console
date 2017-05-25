@@ -1,4 +1,4 @@
-package alexsmirnov.pbconsole
+package alexsmirnov.pbconsole.print
 
 import scalafx.Includes._
 import scalafx.scene.Node
@@ -15,10 +15,23 @@ import scalafx.event.ActionEvent
 import scalafx.geometry.Pos
 import scalafx.scene.layout.Priority
 import scalafx.beans.property.BooleanProperty
-import java.nio.charset.StandardCharsets
 import scala.io.Codec
+import scalafx.scene.control.Separator
+import scalafx.scene.layout.GridPane
+import scalafx.geometry.Insets
+import alexsmirnov.pbconsole._
+import scalafx.beans.binding.ObjectBinding
+import scalafx.scene.text.Text
+import javafx.beans.binding.FloatBinding
+import scalafx.beans.binding.NumberBinding
+import scalafx.scene.canvas.Canvas
+import scalafx.scene.layout.StackPane
+import scalafx.scene.shape.Rectangle
+import scalafx.scene.paint.Color
+import java.util.logging.Logger
 
 object Job {
+  val LOG = Logger.getLogger("alexsmirnov.pbconsole.print.Job")
   val G0Cmd = """^\s*G0(\D.*)""".r
   val G1Cmd = """^\s*G1(\D.*)""".r
   val G92Cmd = """^\s*G92(\D.*)""".r
@@ -26,6 +39,7 @@ object Job {
   val NoComment = """^\s+([^;]+)\s*;?.*$""".r
 
   def dist(from: Option[Float], to: Option[Float]): Float = from.flatMap { f => to.map(_ - f) }.getOrElse(0.0f)
+  
   case class Position(x: Option[Float], y: Option[Float], z: Option[Float], extruder: Option[Float], speed: Float) {
     def moveTo(move: Move) = new Position(
       move.x.orElse(x),
@@ -90,15 +104,16 @@ object Job {
       val newMax = max.max(v)
       range(newMin, newMax)
     } getOrElse (this)
+    def size = max - min
   }
 
   case class PrintStats(x: range,
     y: range,
     z: range,
     extrude: Float,
-    printTimeSec: Float)
+    printTimeMinutes: Float)
 
-  val EmptyStats = PrintStats(range(), range(), range(), 0f, 0L)
+  val EmptyStats = PrintStats(range(), range(), range(), 0f, 0f)
   def estimatePrint(lines: Iterator[String]) = processProgram(lines) { (_, _, _) => () }
   def processProgram(lines: Iterator[String])(callback: (String, Position, PrintStats) => Unit): PrintStats = {
     lines.foldLeft((EmptyStats, UnknownPosition)) { (stp, line) =>
@@ -136,36 +151,93 @@ object Job {
 
 }
 
-class Job(printer: PrinterModel, settings: Settings) {
+class Job(printer: PrinterModel, job: JobModel, settings: Settings) {
 
-  val gcodeFile = ObjectProperty[Option[File]](None)
-  val fileStats = ObjectProperty[Job.PrintStats](Job.EmptyStats)
-  val noFile = BooleanProperty(true)
-
-  noFile <== gcodeFile.map(_.isEmpty)
+  val stats = {
+    val grid = new GridPane {
+      padding = Insets(18)
+      gridLinesVisible = true
+    }
+    grid.addRow(0, new Separator(),statLabel("Size"),statLabel("Min"),statLabel("Max"))
+    grid.addRow(1,statRange("X", job.fileStats.map { s => s.x }): _*)
+    grid.addRow(2,statRange("Y", job.fileStats.map { s => s.y }): _*)
+    grid.addRow(3,statRange("Z", job.fileStats.map { s => s.z }): _*)
+    grid.addRow(5,statLabel("Filanment"), floatOut(job.fileStats.map { s => s.extrude }))
+    grid.addRow(6,statLabel("Time"), floatOut(job.fileStats.map { s => s.printTimeMinutes }))
+    grid
+  }
+  
+  val canvas = new Canvas() {
+            width <== settings.bedWidth.add(10)
+            height <== settings.bedDepth.add(10)
+  }
+  
+  val bedImage = new StackPane {
+    padding = Insets(10)
+    children = List(
+          new Rectangle {
+            width <== settings.bedWidth
+            height <== settings.bedDepth
+            fill = Color.Aqua
+          },
+          canvas
+        )
+  }
 
   val node: Node = new BorderPane {
     top = new HBox {
       hgrow = Priority.Always
       children = List(
         new Label("File name:"),
+        new Separator(),
         new Label {
           minWidth = 100
-          text <== gcodeFile.map[String, StringBinding] { _.map(_.getName).getOrElse("") }
+          text <== job.gcodeFile.map { _.map(_.getName).getOrElse("") }
         },
+        new Separator(),
         new Button("Open") {
           alignment = Pos.BaselineRight
-          onAction = { ae: ActionEvent => gcodeFile.update(selectFile()) }
+          onAction = { ae: ActionEvent => job.gcodeFile.update(selectFile()) }
         })
     }
+    right = stats
+    center = bedImage
+  }
+  
+  def statLabel(txt: String) = new Label(txt)
+  def floatOut(value: NumberBinding): Node = new Text() {
+    text <== value.map { r=>"%6.2f".format(r) }
+  }
+  
+  def statRange(lbl: String,range: ObjectBinding[Job.range]): Seq[javafx.scene.Node] = {
+    val min = floatOut(range.map { _.min })
+    val max = floatOut(range.map { _.max })
+    val size = floatOut(range.map { _.size })
+    Seq(statLabel(lbl),size,min,max)
   }
 
   def selectFile() = Option(Job.openGcodeDialog.showOpenDialog(node.scene().window()))
 
   def processFile(file: File) {
     val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
-    val stats = Job.estimatePrint(src.getLines())
-    fileStats.update(stats)
+    val gc = canvas.graphicsContext2D
+    gc.clearRect(0, 0, canvas.width(), canvas.height())
+    gc.lineWidth = 2.0
+    gc.stroke = Color.Red
+    var lastPos = Job.UnknownPosition
+    val stats = Job.processProgram(src.getLines()){ (_,pos,_) =>
+      if(lastPos.x.isDefined && lastPos.y.isDefined){
+        pos.x.zip(pos.y).foreach{
+          case (x,y) => gc.strokeLine(lastPos.x.get,lastPos.y.get,x, y)
+        }
+      } else {
+        pos.x.zip(pos.y).foreach{
+          case (x,y) => gc.moveTo(x, y)
+        }
+      }
+      lastPos = pos
+    }
+    job.fileStats.update(stats)
   }
-  gcodeFile.onInvalidate(gcodeFile().foreach(processFile(_)))
+  job.gcodeFile.onInvalidate(job.gcodeFile().foreach(processFile(_)))
 }

@@ -3,6 +3,7 @@ package alexsmirnov.pbconsole
 import org.scalatest.FlatSpec
 import scala.io.Source
 import org.scalatest.Matchers
+import alexsmirnov.pbconsole.print.Job
 
 class GCodeParserTest extends FlatSpec with Matchers {
   
@@ -32,7 +33,7 @@ class GCodeParserTest extends FlatSpec with Matchers {
     stats.y.max should be(116.62f +- 0.01f)
     stats.z.min should be(0.0f +- 0.5f )
     stats.z.max should be (3f +- 0.06f)
-    stats.printTimeSec should be(3.5f +- 0.1f)
+    stats.printTimeMinutes should be(3.5f +- 0.1f)
     stats.extrude should be(373.11f +- 1f)
   }
 }
