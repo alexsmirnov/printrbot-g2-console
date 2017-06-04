@@ -31,6 +31,7 @@ import scalafx.scene.paint.Color
 import java.util.logging.Logger
 import scalafx.scene.control.ButtonBar
 import scalafx.scene.layout.Region
+import scalafx.scene.layout.VBox
 
 object Job {
   val LOG = Logger.getLogger("alexsmirnov.pbconsole.print.Job")
@@ -116,6 +117,7 @@ object Job {
     printTimeMinutes: Float)
 
   val EmptyStats = PrintStats(range(), range(), range(), 0f, 0f)
+  val ZeroStats =PrintStats(range(0,0), range(0,0), range(0,0), 0f, 0L)
   def estimatePrint(lines: Iterator[String]) = processProgram(lines) { (_, _, _) => () }
   def processProgram(lines: Iterator[String])(callback: (String, Position, PrintStats) => Unit): PrintStats = {
     lines.foldLeft((EmptyStats, UnknownPosition)) { (stp, line) =>
@@ -184,6 +186,19 @@ class Job(printer: PrinterModel, job: JobModel, settings: Settings) {
       },
       canvas)
   }
+  
+  val printStatus = {
+    
+    val grid = new GridPane {
+      padding = Insets(18)
+      gridLinesVisible = true
+      visible <== job.jobActive
+    }
+    grid.addRow(0, statLabel("Started:"))
+    grid.addRow(0, statLabel("Remaining time:"))
+    grid.addRow(0, statLabel("Current height:"))
+    grid
+  }
 
   val node: Node = new BorderPane {
     top = new HBox {
@@ -214,7 +229,7 @@ class Job(printer: PrinterModel, job: JobModel, settings: Settings) {
         },
         new Separator())
     }
-    right = stats
+    right = new VBox(stats,printStatus)
     center = bedImage
   }
 
