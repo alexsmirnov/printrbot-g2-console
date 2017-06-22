@@ -11,6 +11,7 @@ import org.json4s._
 import org.json4s.native.JsonMethods._
 import scala.collection.immutable.Queue
 import org.reactivestreams.Processor
+import org.reactivestreams.Publisher
 
 /**
  * @author asmirnov
@@ -36,9 +37,11 @@ class Printer(port: Port, responseParser: String => Response,queueSize: Int = 4)
     port.close()
   }
 
-  // Build output pipeline
-  val data = new SimplePublisher[Request]
+  // Build output pipeline. each source has it's own asynchonous stream to not block concurrent sources
+  val data = Seq[CommandSource](CommandSource.Console,CommandSource.Job,CommandSource.Monitor).
+                 map{ s => s-> new SimplePublisher[Request] }.toMap
 
+  @volatile
   var commandsStack: Queue[CommandRequest] = Queue.empty
 
   val linemode = new Processor[Request,Request] with PublisherBase[Request] with SubscriberBase[Request] {
@@ -87,8 +90,9 @@ class Printer(port: Port, responseParser: String => Response,queueSize: Int = 4)
       request(1L)
     }
   }
+  
 
-  val dataLine = data.async(10).transform(linemode)
+  val dataLine = merge(data.values.toSeq.map(_.async(10)): _*).transform(linemode)
 
   val commands = new SimplePublisher[Request]
 
@@ -102,7 +106,7 @@ class Printer(port: Port, responseParser: String => Response,queueSize: Int = 4)
 
   def sendLine(line: String): Unit = { commands.sendNext(PlainTextRequest(line, CommandSource.Console)) }
 
-  def sendData(dataLine: Request): Unit = data.sendNext(dataLine)
+  def sendData(dataLine: Request): Unit = data(dataLine.source).sendNext(dataLine)
 
   def addReceiveListener(r: (CommandSource, Response) => Unit): Unit = responses.subscribe(listener({ case (s, resp) => r(s, resp) }))
 

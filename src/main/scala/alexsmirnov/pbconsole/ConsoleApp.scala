@@ -73,8 +73,8 @@ object ConsoleApp extends JFXApp {
   
   val console = new Console(printerModel)
   val printerControl = new PrinterControl(printerModel)
-  val jobModel = new JobModel
-  val job = new Job(printerModel,jobModel,settings)
+  val jobModel = new JobModel(printerModel)
+  val job = new Job(jobModel,settings)
 
   stage = new PrimaryStage {
     width = 1000

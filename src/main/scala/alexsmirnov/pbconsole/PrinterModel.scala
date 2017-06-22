@@ -51,6 +51,7 @@ class PrinterModel(printer: Printer) {
     case Request.MCmd("83") => extruderRelativePositioning() = true
     case _ => ()
   }
+  
   def sendLine(line: String,src: CommandSource): Unit = {
     setPositioning(line)
     printer.sendData(Request(line,src))

@@ -93,7 +93,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
     val (semaphore, p) = fp
     startAndWait(p)
     semaphore.release(105)
-    val data = Future(Stream.from(1).map { n => GCommand(s"X$n Y$n", CommandSource.Console) }.take(50).foreach(p.sendData _))
+    val data = Future(Stream.from(1).map { n => GCommand(s"G1X$n Y$n", CommandSource.Console) }.take(50).foreach(p.sendData _))
     val start = System.currentTimeMillis()
     commandStream.take(50).foreach(p.sendLine)
     assert((System.currentTimeMillis() - start) < 20)
@@ -121,6 +121,20 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
     val (semaphore, p) = fp
     semaphore.release(10)
     val received = startAndWait(p)
+    val responsePromise = Promise[List[ResponseValue]]()
+    p.sendData(QueryCommand("M105",CommandSource.Monitor,{
+      case sr: StatusResponse => responsePromise.success(sr.values)
+      case other => responsePromise.failure(new Throwable(s"unexpected response $other"))
+    }))
+    val result = Await.result(responsePromise.future, Duration(2,"sec"))
+    println(result)
+    assert(result.exists { _ == ExtruderTemp(20.0f) })
+  }
+  it should "receive temperature during print activity" in { fp =>
+    val (semaphore, p) = fp
+    semaphore.release(10)
+    val received = startAndWait(p)
+    val data = Future(Stream.from(1).map { n => GCommand(s"G1X$n Y$n", CommandSource.Job) }.foreach{ c=> p.sendData(c);semaphore.release(1)})
     val responsePromise = Promise[List[ResponseValue]]()
     p.sendData(QueryCommand("M105",CommandSource.Monitor,{
       case sr: StatusResponse => responsePromise.success(sr.values)
