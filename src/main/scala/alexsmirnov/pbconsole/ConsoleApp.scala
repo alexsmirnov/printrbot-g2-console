@@ -55,6 +55,7 @@ import scalafx.scene.control.Accordion
 import scalafx.scene.control.TitledPane
 import alexsmirnov.pbconsole.print.Job
 import alexsmirnov.pbconsole.print.JobModel
+import alexsmirnov.pbconsole.octoprint.ApiServer
 
 /**
  * TODO: reconnect button, status from {sr:...}, movement control
@@ -75,6 +76,7 @@ object ConsoleApp extends JFXApp {
   val printerControl = new PrinterControl(printerModel)
   val jobModel = new JobModel(printerModel)
   val job = new Job(jobModel,settings)
+  
 
   stage = new PrimaryStage {
     width = 1000
@@ -141,7 +143,9 @@ object ConsoleApp extends JFXApp {
     }
   }
 
+  val apiServer = new ApiServer(settings)
   override def stopApp() {
+    apiServer.stop()
     printer.stop()
   }
 
