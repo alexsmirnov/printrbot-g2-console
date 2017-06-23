@@ -133,6 +133,7 @@ class Job(job: JobModel, settings: Settings) {
       children = List(
         new ProgressBar {
           hgrow = Priority.Always
+          maxWidth = 400
           progress <== job.printService.progress
         })
     }

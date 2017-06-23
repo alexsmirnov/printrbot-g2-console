@@ -43,11 +43,20 @@ class JobModel(printer: PrinterModel) {
     override def createTask() = new JTask[Unit] { task =>
       def call() = {
         gcodeFile().foreach { file =>
+          task.updateProgress(0.0, fileStats().printTimeMinutes)
           val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
           // TODO - send header
           GCode.processProgram(src.getLines()) { (cmd, pos, currentStat) =>
             if (!task.isCancelled()) {
-              printer.sendLine(cmd.command, CommandSource.Job)
+              cmd match {
+                case ExtTempAndWaitCommand(t) => 
+                   printer.sendLine(ExtTempCommand(t).command, CommandSource.Job)
+                   while(printer.extruder.temperature() < (t-1.0) && !task.isCancelled()) Thread.sleep(500)
+                case BedTempAndWaitCommand(t) => 
+                   printer.sendLine(BedTempCommand(t).command, CommandSource.Job)
+                   while(printer.bed.temperature() < (t-1.0) && !task.isCancelled()) Thread.sleep(500)
+                case _ => printer.sendLine(cmd.command, CommandSource.Job)
+              }
               task.updateProgress(currentStat.printTimeMinutes, fileStats().printTimeMinutes)
             }
           }

@@ -9,6 +9,10 @@ object GCode {
   val G0Cmd = """^\s*G0(\D.*)""".r
   val G1Cmd = """^\s*G1(\D.*)""".r
   val G92Cmd = """^\s*G92(\D.*)""".r
+  val M104Cmd = """^\s*M104\s*S(\d+\.?\d*).*""".r
+  val M109Cmd = """^\s*M109\s*S(\d+\.?\d*).*""".r
+  val M140Cmd = """^\s*M140\s*S(\d+\.?\d*).*""".r
+  val M190Cmd = """^\s*M190\s*S(\d+\.?\d*).*""".r
   val MoveParams = """\s*([XYZABEF])(\d+\.?\d*)""".r
   val NoComment = """^\s*([^;]+)\s*;?.*$""".r
 
@@ -56,6 +60,18 @@ object GCode {
   object G92SetPos {
     def apply(p: Map[Char, Float],command: String) = new G92SetPos(p.get('X'), p.get('Y'), p.get('Z'), p.get('E').orElse(p.get('A')),command)
   }
+  case class BedTempCommand(t: Float)extends GCode{
+    val command = s"M140 S$t"
+  }
+  case class BedTempAndWaitCommand(t: Float)extends GCode{
+    val command = s"M190 S$t"
+  }
+  case class ExtTempCommand(t: Float)extends GCode{
+    val command = s"M104 S$t"
+  }
+  case class ExtTempAndWaitCommand(t: Float)extends GCode{
+    val command = s"M109 S$t"
+  }
   case class GCommand(command: String) extends GCode
   case object EmptyCommand extends GCode {
     val command = ""
@@ -70,6 +86,10 @@ object GCode {
     case G0Cmd(params) => G0Move(parseParams(params),line)
     case G1Cmd(params) => G1Move(parseParams(params),line)
     case G92Cmd(params) => G92SetPos(parseParams(params),line)
+    case M104Cmd(temp) => ExtTempCommand(temp.toFloat)
+    case M109Cmd(temp) => ExtTempAndWaitCommand(temp.toFloat)
+    case M140Cmd(temp) => BedTempCommand(temp.toFloat)
+    case M190Cmd(temp) => BedTempAndWaitCommand(temp.toFloat)
     case other => GCommand(other)
   }
 

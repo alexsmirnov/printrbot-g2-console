@@ -7,8 +7,6 @@ import scalafx.beans.property.BooleanProperty
 import alexsmirnov.stream._
 import alexsmirnov.stream.ReactiveOps._
 import alexsmirnov.pbconsole.serial._
-import org.json4s._
-import org.json4s.native.JsonMethods._
 import scala.collection.immutable.Queue
 import org.reactivestreams.Processor
 import org.reactivestreams.Publisher

@@ -2,9 +2,8 @@ package alexsmirnov.pbconsole
 
 import org.scalatest.WordSpec
 import org.scalatest.Matchers
-import org.json4s._
-import org.json4s.JsonDSL._
-import org.json4s.native.JsonMethods._
+import spray.json._
+import DefaultJsonProtocol._ // if you don't supply your own Protocol (see below)
 
 class ResponseParserTest extends WordSpec with Matchers {
   "parse" when { 
@@ -16,7 +15,7 @@ class ResponseParserTest extends WordSpec with Matchers {
     "parse response" should {
       "return CommandResponse" in {
         G2Response("""{"r":{"xjm":5000000000.000},"f":[3,0,6]}""") should be(
-            G2Response.G2CommandResponse(("xjm"-> 5000000000.000),List(3,0,6),"""{"r":{"xjm":5000000000.000},"f":[3,0,6]}"""))
+            G2Response.G2CommandResponse(JsObject(Map("xjm"-> JsNumber(5000000000.000))),List(3,0,6),"""{"r":{"xjm":5000000000.000},"f":[3,0,6]}"""))
       }
     }
     "parse status report" should {
