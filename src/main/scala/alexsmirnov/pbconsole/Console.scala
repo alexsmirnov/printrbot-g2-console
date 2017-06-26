@@ -44,11 +44,11 @@ object Console {
  * @author asmirnov
  *
  */
-class Console(printer: PrinterModel) { console =>
+class Console(printer: PrinterModel,settings: Settings) { console =>
 
   val buffer = ObservableBuffer.empty[Console.Msg]
   val disabled = BooleanProperty(false)
-  val debug = BooleanProperty(false)
+  val debug = settings.debugOutput
   var history: List[String] = Nil
 
   val node: Node = {

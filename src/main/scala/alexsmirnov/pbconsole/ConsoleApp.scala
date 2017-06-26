@@ -65,14 +65,14 @@ import alexsmirnov.pbconsole.octoprint.ApiServer
 object ConsoleApp extends JFXApp {
 
   
-  val settings = new Settings()
+  val settings = Settings("/alexsmirnov/pbconsole")
 
   val printer = Printer(parameters.named)
 
   
   val printerModel = new PrinterModel(printer)
   
-  val console = new Console(printerModel)
+  val console = new Console(printerModel,settings)
   val printerControl = new PrinterControl(printerModel)
   val jobModel = new JobModel(printerModel)
   val job = new Job(jobModel,settings)
