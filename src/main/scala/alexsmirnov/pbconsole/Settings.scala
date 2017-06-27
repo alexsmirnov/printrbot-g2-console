@@ -5,6 +5,7 @@ import scalafx.beans.property.DoubleProperty
 import scalafx.collections.ObservableBuffer
 import scalafx.beans.property.StringProperty
 import java.util.prefs.Preferences
+import javafx.collections.FXCollections
 
 class Settings {
   val debugOutput = BooleanProperty(false)
@@ -12,7 +13,7 @@ class Settings {
   val bedDepth = DoubleProperty(203)
   val height = DoubleProperty(130)
   val zOffset = DoubleProperty(0.0)
-  val macros = ObservableBuffer.empty[Macro]
+  val macros = new ObservableBuffer(FXCollections.observableArrayList(Macro.extractor))
   val jobStart = StringProperty("")
   val jobEnd = StringProperty("")
 }
@@ -73,10 +74,10 @@ object Settings {
       val mWithIndex = settings.macros.zipWithIndex
       node.putInt(NUM_MACROS, mWithIndex.size)
       mWithIndex.foreach {
-        case (Macro(name,description,content),n) =>
-          node.put("mName"+n,name)
-          node.put("mDescription"+n,description)
-          node.put("mContent"+n,content)
+        case (m,n) =>
+          node.put("mName"+n,m.name)
+          node.put("mDescription"+n,m.description)
+          node.put("mContent"+n,m.content)
       }
       node.flush() 
     }
