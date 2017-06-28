@@ -1,27 +1,70 @@
 package alexsmirnov.pbconsole
 
 import scala.collection.JavaConverters._
+
+import scalafx.Includes._
 import scalafx.collections.ObservableBuffer
+import scalafx.event.ActionEvent
+import scalafx.geometry.Insets
 import scalafx.scene.Node
 import scalafx.scene.control.Accordion
+import scalafx.scene.control.Button
+import scalafx.scene.control.Label
 import scalafx.scene.control.TextArea
+import scalafx.scene.control.TextField
 import scalafx.scene.control.TitledPane
+import scalafx.scene.layout.GridPane
 import scalafx.scene.layout.HBox
 import scalafx.scene.layout.Priority
 import scalafx.scene.layout.VBox
+import scalafx.beans.property.DoubleProperty
+import scalafx.scene.control.TextFormatter
+import scalafx.util.converter.NumberStringConverter
 
 class Prefs(settings: Settings) {
 
-  val props = new VBox {
-
+  def controlGrid(rows: (String, Node)*): Node = {
+    val grid = new GridPane {
+      padding = Insets(18)
+      gridLinesVisible = true
+    }
+    rows.zipWithIndex.foreach {
+      case ((label, control), r) =>
+        grid.addRow(r, new Label(label), control)
+    }
+    grid
+  }
+  
+  def doubleText(prop: DoubleProperty) = {
+    val formatter = new TextFormatter(new NumberStringConverter())
+    formatter.value <==> prop
+    val text = new TextField {
+          textFormatter = formatter
+        }
+    text
   }
 
-  def macroPane(m: Macro) = {
+  val props = controlGrid(
+      "Bed width" -> doubleText(settings.bedWidth)
+      )
+  
+      def macroPane(m: Macro) = {
     new TitledPane {
       text <== m.nameProperty
-      content = new TextArea {
-        text <== m.contentProperty
+      graphic = new Button {
+        text = "Remove"
+        onAction ={ ae: ActionEvent => settings.macros.remove(m) } 
       }
+      content = controlGrid(
+        "Name" -> new TextField {
+          text <==> m.nameProperty
+        },
+        "Description" -> new TextField {
+          text <==> m.descriptionProperty
+        },
+        "GCode" -> new TextArea {
+          text <==> m.contentProperty
+        })
     }
   }
 
@@ -44,7 +87,14 @@ class Prefs(settings: Settings) {
         case ObservableBuffer.Update(pos, updated) => // already bound to controls
       }
   })
+  
   val node: Node = new HBox {
-    children = List()
+    children = List(props, new VBox {
+      children = List(
+        new Button {
+          text = "Add Macro"
+          onAction ={ ae: ActionEvent => val m = new Macro;m.name = "New Macro";settings.macros.add(m) }
+        }, macros)
+    })
   }
 }

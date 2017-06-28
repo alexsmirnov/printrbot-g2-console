@@ -76,7 +76,7 @@ object ConsoleApp extends JFXApp {
   val printerControl = new PrinterControl(printerModel)
   val jobModel = new JobModel(printerModel)
   val job = new Job(jobModel,settings)
-  
+  val preferences = new Prefs(settings)
 
   stage = new PrimaryStage {
     width = 1000
@@ -116,6 +116,10 @@ object ConsoleApp extends JFXApp {
       vgrow = Priority.Always
       hgrow = Priority.Always
       panes = Seq(
+        new TitledPane {
+          text = "Preferences"
+          content = preferences.node
+        },
         new TitledPane {
           text = "Printer control"
           content = printerControl.node
