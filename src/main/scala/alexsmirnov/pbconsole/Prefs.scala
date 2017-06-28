@@ -20,6 +20,7 @@ import scalafx.scene.layout.VBox
 import scalafx.beans.property.DoubleProperty
 import scalafx.scene.control.TextFormatter
 import scalafx.util.converter.NumberStringConverter
+import javafx.beans.property.StringProperty
 
 class Prefs(settings: Settings) {
 
@@ -43,9 +44,20 @@ class Prefs(settings: Settings) {
         }
     text
   }
+  def textField(value: StringProperty) = new TextField {
+          text <==> value
+        }
+  def textEdit(value: StringProperty) = new TextArea {
+          text <==> value
+        }
 
   val props = controlGrid(
-      "Bed width" -> doubleText(settings.bedWidth)
+      "Bed width" -> doubleText(settings.bedWidth),
+      "Bed depth" -> doubleText(settings.bedDepth),
+      "Height" -> doubleText(settings.height),
+      "Printhead Z offset" -> doubleText(settings.zOffset),
+      "Job start GCode" -> textEdit(settings.jobStart),
+      "Job End GCode" -> textEdit(settings.jobEnd)
       )
   
       def macroPane(m: Macro) = {
@@ -56,15 +68,10 @@ class Prefs(settings: Settings) {
         onAction ={ ae: ActionEvent => settings.macros.remove(m) } 
       }
       content = controlGrid(
-        "Name" -> new TextField {
-          text <==> m.nameProperty
-        },
-        "Description" -> new TextField {
-          text <==> m.descriptionProperty
-        },
-        "GCode" -> new TextArea {
-          text <==> m.contentProperty
-        })
+        "Name" -> textField(m.nameProperty),
+        "Description" -> textField(m.descriptionProperty),
+        "GCode" -> textEdit(m.contentProperty)
+        )
     }
   }
 
