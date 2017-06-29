@@ -80,9 +80,10 @@ class Prefs(settings: Settings) {
   val macros = new Accordion {
     vgrow = Priority.Always
     hgrow = Priority.Always
-    panes = macroPanes
+//    panes = macroPanes
   }
-
+  settings.macros.bindMap(macros.panes)(macroPane)
+  /*
   settings.macros.onChange((_, changes) => {
     for (change <- changes)
       change match {
@@ -94,7 +95,7 @@ class Prefs(settings: Settings) {
         case ObservableBuffer.Update(pos, updated) => // already bound to controls
       }
   })
-  
+  */
   val node: Node = new HBox {
     children = List(props, new VBox {
       children = List(

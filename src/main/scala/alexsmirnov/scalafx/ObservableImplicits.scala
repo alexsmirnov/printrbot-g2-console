@@ -1,5 +1,6 @@
 package alexsmirnov.scalafx
 
+import scala.collection.JavaConverters._
 import javafx.beans.binding.DoubleBinding
 import javafx.beans.binding.FloatBinding
 import javafx.beans.binding.IntegerBinding
@@ -12,6 +13,9 @@ import scalafx.beans.binding.StringBinding
 import scalafx.beans.binding.NumberBinding
 import scalafx.beans.property.Property
 import scalafx.beans.value.ObservableValue
+import scalafx.collections.ObservableBuffer
+import javafx.collections.ObservableList
+
 sealed trait BindingBuilder[A, B] {
   def createBinding(f: () => A, deps: Observable*): B
 }
@@ -61,6 +65,28 @@ trait ObservableImplicits extends LowPriorityObservableImplicits {
       f
     } else {
       Platform.runLater(f)
+    }
+  }
+
+  implicit class ObservableBufferOps[A](val buff: ObservableBuffer[A]) {
+    def bindMap[B](other: ObservableList[B])(f: A => B) = {
+      other.clear()
+      buff.foreach { a => other.add(f(a)) }
+      buff.onChange((_, changes) => {
+        for (change <- changes)
+          change match {
+            case ObservableBuffer.Add(pos, added) =>
+              val addedPanes = added.toSeq.map { m => f(m) }
+              other.addAll(pos, addedPanes.asJavaCollection)
+            case ObservableBuffer.Remove(pos, removed) => other.remove(pos, pos + removed.size)
+            case ObservableBuffer.Reorder(from, to, permutation) =>
+              val changed = List(other.subList(from, to).asScala: _*)
+              changed.zipWithIndex.foreach { case (b, pos) => other.set(permutation(pos + from), b) }
+            case ObservableBuffer.Update(pos, updated) => 
+//              val changed = buff.slice(pos, pos+updated).map(f)
+//              other.setAll(changed.asJavaCollection)
+          }
+      })
     }
   }
 }

@@ -6,6 +6,7 @@ import scalafx.collections.ObservableBuffer
 import scalafx.beans.property.StringProperty
 import java.util.prefs.Preferences
 import javafx.collections.FXCollections
+import java.io.File
 
 class Settings {
   val debugOutput = BooleanProperty(false)
@@ -16,6 +17,7 @@ class Settings {
   val macros = new ObservableBuffer(FXCollections.observableArrayList(Macro.extractor))
   val jobStart = StringProperty("")
   val jobEnd = StringProperty("")
+  val uploadFolder = StringProperty("")
 }
 
 object Settings {
@@ -27,6 +29,7 @@ object Settings {
   val NUM_MACROS = "numMacros"
   val JS = "jobStart"
   val JE = "jobEnd"
+  val UF = "upload"
   def apply(path: String): Settings = {
     val s = restore(path)
     bind(s, path)
@@ -40,6 +43,12 @@ object Settings {
     s.bedDepth.update(node.getDouble(BED_D, 203))
     s.height.update(node.getDouble(H, 130))
     s.zOffset.update(node.getDouble(Z_OFFSET, 0.0))
+    val uploadFolder = node.get(UF,"")
+    if(uploadFolder.isEmpty()) {
+      val userHome = System.getProperty("user.dir")
+      val defaultFolder = new File(new File(new File(userHome),".pbconsole"),"upload").getAbsolutePath
+      s.uploadFolder.update(defaultFolder)
+    } else s.uploadFolder.update(uploadFolder)
     val nMacros = node.getInt(NUM_MACROS, 0)
     ( 0 until nMacros ) foreach { n =>
       val name =node.get("mName"+n, "")
@@ -70,6 +79,7 @@ object Settings {
     bindDouble(node, settings.zOffset, Z_OFFSET)
     bindString(node, settings.jobStart, JS)
     bindString(node, settings.jobEnd, JE)
+    bindString(node, settings.uploadFolder, UF)
     settings.macros.onChange {
       val mWithIndex = settings.macros.zipWithIndex
       node.putInt(NUM_MACROS, mWithIndex.size)

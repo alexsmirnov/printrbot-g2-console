@@ -73,8 +73,8 @@ object ConsoleApp extends JFXApp {
   val printerModel = new PrinterModel(printer)
   
   val console = new Console(printerModel,settings)
-  val printerControl = new PrinterControl(printerModel)
-  val jobModel = new JobModel(printerModel)
+  val printerControl = new PrinterControl(printerModel,settings)
+  val jobModel = new JobModel(printerModel,settings)
   val job = new Job(jobModel,settings)
   val preferences = new Prefs(settings)
 
@@ -147,7 +147,7 @@ object ConsoleApp extends JFXApp {
     }
   }
 
-  val apiServer = new ApiServer(settings)
+  val apiServer = new ApiServer(printerModel, jobModel, settings)
   override def stopApp() {
     apiServer.stop()
     printer.stop()
@@ -158,5 +158,5 @@ object ConsoleApp extends JFXApp {
   scheduler.period = Duration(10000.0)
 //  scheduler.onSucceeded = { ev: WorkerStateEvent => console.addInput(scheduler.lastValue()) }
   //  scheduler.start()
-  printer.start()
+  delayedInit { printer.start() }
 }

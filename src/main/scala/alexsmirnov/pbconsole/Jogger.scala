@@ -16,7 +16,7 @@ import scalafx.geometry.Insets
 import javafx.scene.layout.Priority
 import scalafx.geometry.Pos
 
-class Jogger(printer: PrinterModel) {
+class Jogger(printer: PrinterModel, settings: Settings) {
 
   def moveButton(label: String, move: String => Unit): Node = new Button(label) {
     minWidth = 45
@@ -74,14 +74,25 @@ class Jogger(printer: PrinterModel) {
     grid
   }
 
-  val macros = ObservableBuffer("Bed Level" -> Seq("G38.4",
-    "M400",
-    "G32",
-    "M400",
-    "G92 Z15.6",
-    "M400",
-    "G0X50Y100Z40F5000"))
-  def controls = macros.map { case (name,commands) => macroButton(name, commands: _*) }
+  //  val macros = ObservableBuffer("Bed Level" -> Seq("G38.4",
+  //    "M400",
+  //    "G32",
+  //    "M400",
+  //    "G92 Z15.6",
+  //    "M400",
+  //    "G0X50Y100Z40F5000"))
+  val macros = new FlowPane {
+    padding = Insets(10)
+  }
+
+  settings.macros.bindMap(macros.children) { m =>
+    new Button() {
+      margin = Insets(5)
+      text <== m.nameProperty
+      onAction = { ae: ActionEvent => Macro.prepare(m.content, settings).foreach(printer.sendLine(_, CommandSource.Monitor)) }
+      disable <== printer.connected.not()
+    }.delegate
+  }
   val node: Node = new BorderPane {
     padding = Insets(10)
     center = xyJogger
@@ -105,11 +116,7 @@ class Jogger(printer: PrinterModel) {
             moveButton(label, moveE)
         }
       },
-      new FlowPane {
-        padding = Insets(10)
-        spacing = 10
-        children = controls
-      })
+        macros)
     }
   }
 }
