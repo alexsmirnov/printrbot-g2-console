@@ -9,43 +9,20 @@ import spray.json.DefaultJsonProtocol._
 import alexsmirnov.pbconsole.Settings
 import alexsmirnov.pbconsole.PrinterModel
 import alexsmirnov.pbconsole.print.JobModel
+import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
+import spray.json._
 
-class ApiServer(printer: PrinterModel, job: JobModel, config: Settings) {
+class ApiServer(printer: PrinterModel, job: JobModel, config: Settings) extends FilesRoute {
   implicit val system = ActorSystem("my-system")
   implicit val materializer = ActorMaterializer()
   // needed for the future flatMap/onComplete in the end
   implicit val executionContext = system.dispatcher
 
+  val fRoute = filesRoute(config)
   val route =
     extractLog { log =>
       pathPrefix("api") {
-        pathPrefix("files") {
-          pathEnd {
-            get {
-              // all files
-              complete("")
-            }
-          } ~
-            path("local") {
-              get {
-                // all files
-                complete("")
-              } ~
-                post {
-                  uploadedFile("file") {
-                    case (metadata, file) =>
-                      formFields('select.as[Boolean] ? false, 'print.as[Boolean] ? false) {
-                        case (select, print) =>
-            log.info(s"Upload request to files/local service select:$select, print:$print, file ${file.getAbsolutePath}, ${metadata}")
-                          // move to upload folder, select and print if requested
-                          file.delete()
-                          complete(StatusCodes.OK)
-                      }
-                  }
-                }
-            }
-        }
-      } ~
+        fRoute ~
         path(Remaining) { service =>
           extractMethod { method =>
             log.info(s"${method.name} request to service $service")
@@ -53,6 +30,7 @@ class ApiServer(printer: PrinterModel, job: JobModel, config: Settings) {
           }
         }
     }
+  }
 
   val bindingFuture = Http().bindAndHandle(route, "localhost", 5000)
   def stop() {
