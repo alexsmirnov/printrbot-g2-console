@@ -19,6 +19,7 @@ class MacroTest extends FlatSpec with Matchers {
     s.bedWidth.update(12.0)
     s.bedDepth.update(110.0)
     s.height.update(22.00)
-    Macro.prepare("G1 X${bedWidth} Y${bedDepth} Z${height}", s).toStream should contain only("G1 X12.0 Y110.0 Z22.0")
+    s.zOffset.update(15.6)
+    Macro.prepare("G1 X${bedWidth} Y${bedDepth} Z${height} E${zOffset}", s).toStream should contain only("G1 X12.0 Y110.0 Z22.0 E15.6")
   }
 }

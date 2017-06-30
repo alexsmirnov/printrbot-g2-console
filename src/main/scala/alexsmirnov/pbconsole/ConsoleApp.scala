@@ -149,6 +149,7 @@ object ConsoleApp extends JFXApp {
 
   val apiServer = new ApiServer(printerModel, jobModel, settings)
   override def stopApp() {
+    jobModel.printService.reset()
     apiServer.stop()
     printer.stop()
   }

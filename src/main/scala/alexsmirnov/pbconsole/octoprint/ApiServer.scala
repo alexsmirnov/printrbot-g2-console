@@ -11,31 +11,41 @@ import alexsmirnov.pbconsole.PrinterModel
 import alexsmirnov.pbconsole.print.JobModel
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json._
+import java.util.logging.Logger
 
 class ApiServer(printer: PrinterModel, job: JobModel, config: Settings) extends FilesRoute {
   implicit val system = ActorSystem("my-system")
   implicit val materializer = ActorMaterializer()
+  val LOG = Logger.getLogger(this.getClass.getCanonicalName)
   // needed for the future flatMap/onComplete in the end
   implicit val executionContext = system.dispatcher
 
   val fRoute = filesRoute(config)
   val route =
-    extractLog { log =>
-      pathPrefix("api") {
-        fRoute ~
-        path(Remaining) { service =>
-          extractMethod { method =>
-            log.info(s"${method.name} request to service $service")
-            complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
+    pathPrefix("api") {
+      fRoute ~
+        extractLog { log =>
+          path(Remaining) { service =>
+            extractMethod { method =>
+              log.info(s"${method.name} request to service $service")
+              complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, "<h1>Say hello to akka-http</h1>"))
+            }
           }
         }
     }
-  }
 
   val bindingFuture = Http().bindAndHandle(route, "localhost", 5000)
   def stop() {
     bindingFuture
-      .flatMap(_.unbind()) // trigger unbinding from the port
-      .onComplete(_ => system.terminate()) // and shutdown when done
+      .flatMap { http =>
+        LOG.info("Unbind Http server")
+        http.unbind()
+      } // trigger unbinding from the port
+      .onComplete { _ =>
+        LOG.info("Terminate Actor system")
+        system.terminate().onComplete { _ =>
+          LOG.info("Actor system terminated")
+        }
+      } // and shutdown when done
   }
 }

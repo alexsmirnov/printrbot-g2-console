@@ -154,7 +154,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port {
     sr.addEventListener(new SerialPortEventListener {
       def serialEvent( ev: SerialPortEvent  ) {
         ev.getEventType match {
-          case SerialPortEvent.DATA_AVAILABLE => LOG.info("Data available"); LockSupport.unpark(t)
+          case SerialPortEvent.DATA_AVAILABLE => LOG.fine("Data available"); LockSupport.unpark(t)
           case et => LOG.info(s"Received event $et")
         }
       }

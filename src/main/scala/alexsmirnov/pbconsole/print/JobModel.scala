@@ -45,7 +45,8 @@ class JobModel(printer: PrinterModel, settings: Settings) {
   val printService = new JService[PrintStats] { srv =>
     override def createTask() = new JTask[PrintStats] { task =>
       def call() = {
-        Process(Seq("caffeinate", "-i", "-t", (jobStats().printTimeMinutes * 66).toInt.toString())).run()
+        // add 20 minutes for heatind and 10% for possible error
+        Process(Seq("caffeinate", "-i", "-t", ((jobStats().printTimeMinutes+20) * 66).toInt.toString())).run()
         gcodeFile().foreach { file =>
           task.updateProgress(0.0, fileStats().printTimeMinutes)
           val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
@@ -69,13 +70,14 @@ class JobModel(printer: PrinterModel, settings: Settings) {
             }
           } finally {
             // send footer
-            Macro.prepare(settings.jobStart(), settings).foreach(printer.sendLine(_, CommandSource.Job))
+            Macro.prepare(settings.jobEnd(), settings).foreach(printer.sendLine(_, CommandSource.Job))
           }
         }
         ZeroStats
       }
     }
   }
+  
   jobActive <== (printService.state === JWorker.State.SCHEDULED) or (printService.state === JWorker.State.RUNNING)
 
   def start() {

@@ -36,6 +36,7 @@ object Macro {
     values.put(BED_W, conf.bedWidth())
     values.put(BED_D, conf.bedDepth())
     values.put(H, conf.height())
+    values.put(Z_OFFSET, conf.zOffset())
     val sub = new StrSubstitutor(values)
     val src = Source.fromString(sub.replace(content))
     src.getLines()
