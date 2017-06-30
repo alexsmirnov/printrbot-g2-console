@@ -57,7 +57,8 @@ class Prefs(settings: Settings) {
       "Height" -> doubleText(settings.height),
       "Printhead Z offset" -> doubleText(settings.zOffset),
       "Job start GCode" -> textEdit(settings.jobStart),
-      "Job End GCode" -> textEdit(settings.jobEnd)
+      "Job End GCode" -> textEdit(settings.jobEnd),
+      "Upload folder" -> textField(settings.uploadFolder)
       )
   
       def macroPane(m: Macro) = {

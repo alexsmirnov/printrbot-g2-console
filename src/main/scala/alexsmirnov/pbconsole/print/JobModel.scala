@@ -20,7 +20,9 @@ import alexsmirnov.pbconsole.Settings
 import alexsmirnov.pbconsole.Macro
 
 object JobModel {
-
+  trait FileProcessListener {
+    def callback(): ((GCode, GCode.Position) => Unit)
+  }
 }
 class JobModel(printer: PrinterModel, settings: Settings) {
   import GCode._
@@ -34,19 +36,27 @@ class JobModel(printer: PrinterModel, settings: Settings) {
   val jobPaused = BooleanProperty(false)
   val jobStartTime = ObjectProperty[LocalTime](LocalTime.now())
   val jobStats = ObjectProperty[PrintStats](ZeroStats)
-
-  def updateFile(file: File, callback: (GCode, Position) => Unit) {
+  private[this] var fileListeners: List[JobModel.FileProcessListener] = Nil
+  def addFileListener(listener: JobModel.FileProcessListener) {
+    fileListeners = listener :: fileListeners
+  }
+  gcodeFile.onInvalidate {
+    val callbacks = fileListeners.map(_.callback())
+    gcodeFile().foreach { file =>
+      val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
+      val stats = GCode.processProgram(src.getLines()) { (cmd, pos, _) => callbacks.foreach(_(cmd, pos)) }
+      fileStats.update(stats)
+    }
+  }
+  def updateFile(file: File) {
     gcodeFile.update(Some(file))
-    val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
-    val stats = GCode.processProgram(src.getLines()) { (cmd, pos, _) => callback(cmd, pos) }
-    fileStats.update(stats)
   }
 
   val printService = new JService[PrintStats] { srv =>
     override def createTask() = new JTask[PrintStats] { task =>
       def call() = {
         // add 20 minutes for heatind and 10% for possible error
-        Process(Seq("caffeinate", "-i", "-t", ((jobStats().printTimeMinutes+20) * 66).toInt.toString())).run()
+        val caffe = Process(Seq("caffeinate", "-i", "-t", ((jobStats().printTimeMinutes + 20) * 66).toInt.toString())).run()
         gcodeFile().foreach { file =>
           task.updateProgress(0.0, fileStats().printTimeMinutes)
           val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
@@ -69,6 +79,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
               }
             }
           } finally {
+            caffe.destroy()
             // send footer
             Macro.prepare(settings.jobEnd(), settings).foreach(printer.sendLine(_, CommandSource.Job))
           }
@@ -77,7 +88,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
       }
     }
   }
-  
+
   jobActive <== (printService.state === JWorker.State.SCHEDULED) or (printService.state === JWorker.State.RUNNING)
 
   def start() {

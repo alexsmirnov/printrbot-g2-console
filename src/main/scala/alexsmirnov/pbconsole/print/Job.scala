@@ -154,12 +154,18 @@ class Job(job: JobModel, settings: Settings) {
   def selectFile() {
     val selected = Job.openGcodeDialog.showOpenDialog(node.scene().window())
     if (null != selected) {
+      job.updateFile(selected)
+    }
+  }
+  
+  job.addFileListener(new JobModel.FileProcessListener {
+    def callback() = {
       val gc = canvas.graphicsContext2D
       gc.clearRect(0, 0, canvas.width(), canvas.height())
       gc.lineWidth = 1.0
       gc.stroke = Color.Red
       var lastPos = GCode.UnknownPosition
-      job.updateFile(selected, { (cmd, pos) =>
+      val cb = { (cmd: GCode, pos: GCode.Position) =>
         val lastXy = lastPos.x.zip(lastPos.y)
         val xy = pos.x.zip(pos.y)
         cmd match {
@@ -174,7 +180,8 @@ class Job(job: JobModel, settings: Settings) {
           case cmd =>
         }
         lastPos = pos
-      })
+      }
+      cb
     }
-  }
+  })
 }
