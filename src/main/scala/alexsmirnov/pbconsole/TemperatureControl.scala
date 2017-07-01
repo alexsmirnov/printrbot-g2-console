@@ -52,9 +52,7 @@ class TemperatureControl(printer: PrinterModel) {
   val extruderTargetData = ObservableBuffer.empty[DT]
 
   def series(name: String, data: ObservableBuffer[DT]) = {
-    val s = new XYChart.Series[Number, Number]
-    s.name_=(name)
-    s.data_=(data)
+    val s = XYChart.Series[Number, Number](name,data)
     s
   }
 

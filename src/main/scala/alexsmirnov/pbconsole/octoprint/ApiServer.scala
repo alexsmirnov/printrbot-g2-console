@@ -13,7 +13,7 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json._
 import java.util.logging.Logger
 
-class ApiServer(printer: PrinterModel, job: JobModel, config: Settings) extends FilesRoute with JobRoute {
+class ApiServer(printer: PrinterModel, job: JobModel, config: Settings) extends FilesRoute with JobRoute with PrinterRoute {
   implicit val system = ActorSystem("my-system")
   implicit val materializer = ActorMaterializer()
   val LOG = Logger.getLogger(this.getClass.getCanonicalName)
@@ -22,10 +22,12 @@ class ApiServer(printer: PrinterModel, job: JobModel, config: Settings) extends 
 
   val fRoute = filesRoute(job,config)
   val jRoute = jobRoute(job,printer)
+  val pRoute = printerRoute(job, printer)
   val route =
     pathPrefix("api") {
       fRoute ~
       jRoute ~
+      pRoute ~
         extractLog { log =>
           path(Remaining) { service =>
             extractMethod { method =>
