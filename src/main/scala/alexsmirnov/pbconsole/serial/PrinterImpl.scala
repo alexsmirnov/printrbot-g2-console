@@ -1,4 +1,4 @@
-package alexsmirnov.pbconsole
+package alexsmirnov.pbconsole.serial
 
 import alexsmirnov.pbconsole.serial.Port
 import alexsmirnov.pbconsole.serial.PortStub
@@ -10,22 +10,29 @@ import alexsmirnov.pbconsole.serial._
 import scala.collection.immutable.Queue
 import org.reactivestreams.Processor
 import org.reactivestreams.Publisher
+import alexsmirnov.pbconsole.gcode.CommandResponse
+import alexsmirnov.pbconsole.gcode.CommandRequest
+import alexsmirnov.pbconsole.gcode.Request
+import alexsmirnov.pbconsole.CommandSource
+import alexsmirnogcode.v.pbconsole.Response
+imporgcode.t alexsmirnov.pbconsole.SmoothieResponse
+import alexsmirnov.pbconsole.gcode.PlainTextRequest
 
 /**
  * @author asmirnov
  *
  */
-object Printer {
+object PrinterImpl {
   def apply(args: Map[String, String]) = {
     val port = args.get("port") match {
       case Some("stub") => new PortStub()
       case Some(portname) => Port(portname.r)
       case None => Port("/dev/tty\\.usbmodem.*".r)
     }
-    new Printer(port, SmoothieResponse(_))
+    new PrinterImpl(port, SmoothieResponse(_))
   }
 }
-class Printer(port: Port, responseParser: String => Response,queueSize: Int = 4) {
+class PrinterImpl(port: Port, responseParser: String => Response,queueSize: Int = 4) {
 
   def start() {
     port.run()

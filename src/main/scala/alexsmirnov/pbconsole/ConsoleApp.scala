@@ -56,6 +56,7 @@ import scalafx.scene.control.TitledPane
 import alexsmirnov.pbconsole.print.Job
 import alexsmirnov.pbconsole.print.JobModel
 import alexsmirnov.pbconsole.octoprint.ApiServer
+import alexsmirnov.pbconsole.serial.PrinterImpl
 
 /**
  * TODO: reconnect button, status from {sr:...}, movement control
@@ -67,7 +68,7 @@ object ConsoleApp extends JFXApp {
   
   val settings = Settings("/alexsmirnov/pbconsole")
 
-  val printer = Printer(parameters.named)
+  val printer = PrinterImpl(parameters.named)
 
   
   val printerModel = new PrinterModel(printer)

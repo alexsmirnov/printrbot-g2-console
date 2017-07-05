@@ -18,6 +18,8 @@ import alexsmirnov.pbconsole.CommandSource
 import scalafx.concurrent.WorkerStateEvent
 import alexsmirnov.pbconsole.Settings
 import alexsmirnov.pbconsole.Macro
+import java.util.logging.Logger
+import alexsmirnov.pbconsole.gcode.GCode
 
 object JobModel {
   trait FileProcessListener {
@@ -26,6 +28,7 @@ object JobModel {
 }
 class JobModel(printer: PrinterModel, settings: Settings) {
   import GCode._
+  val LOG = Logger.getLogger("alexsmirnov.pbconsole.print.JobModel")
   val gcodeFile = ObjectProperty[Option[File]](None)
   val fileStats = ObjectProperty[PrintStats](ZeroStats)
   val noFile = BooleanProperty(true)
@@ -52,8 +55,16 @@ class JobModel(printer: PrinterModel, settings: Settings) {
     gcodeFile.update(Some(file))
   }
 
+ /**
+ * Job cancel flag, to avoid thread interruption in streams
+ */
+  @volatile 
+  private[this] var jobCancelled: Boolean = true
+
   val printService = new JService[PrintStats] { srv =>
     override def createTask() = new JTask[PrintStats] { task =>
+      // Check if print job is not cancelled
+      def isActive(): Boolean = !(jobCancelled || task.isCancelled())
       def call() = {
         // add 20 minutes for heatind and 10% for possible error
         val caffe = Process(Seq("caffeinate", "-i", "-t", ((jobStats().printTimeMinutes + 20) * 66).toInt.toString())).run()
@@ -63,25 +74,33 @@ class JobModel(printer: PrinterModel, settings: Settings) {
           // send header
           val lines = Macro.prepare(settings.jobStart(), settings) ++ src.getLines()
           try {
+            LOG.info(s"Print job started")
             GCode.processProgram(lines) { (cmd, pos, currentStat) =>
-              if (!task.isCancelled()) {
+              if (isActive()) {
                 cmd match {
                   case ExtTempAndWaitCommand(t) =>
                     printer.sendLine(ExtTempCommand(t).command, CommandSource.Job)
-                    while (printer.extruder.temperature() < (t - 1.0) && !task.isCancelled()) Thread.sleep(500)
+                    while (printer.extruder.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
                   case BedTempAndWaitCommand(t) =>
                     printer.sendLine(BedTempCommand(t).command, CommandSource.Job)
-                    while (printer.bed.temperature() < (t - 1.0) && !task.isCancelled()) Thread.sleep(500)
+                    while (printer.bed.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
                   case _ => printer.sendLine(cmd.command, CommandSource.Job)
                 }
                 task.updateProgress(currentStat.printTimeMinutes, fileStats().printTimeMinutes)
                 task.updateValue(currentStat)
               }
             }
+          } catch {
+            case ie: InterruptedException =>
+              val ts = Thread.currentThread().isInterrupted()
+              LOG.warning(s"Print tread interrupted. Thread interrupt state $ts")
+
           } finally {
+            LOG.info(s"Print job completed, send final GCode")
             caffe.destroy()
             // send footer
             Macro.prepare(settings.jobEnd(), settings).foreach(printer.sendLine(_, CommandSource.Job))
+            LOG.info(s"Print job finished")
           }
         }
         ZeroStats
@@ -94,11 +113,13 @@ class JobModel(printer: PrinterModel, settings: Settings) {
   def start() {
     if (gcodeFile().isDefined && !jobActive()) {
       printService.reset()
+      jobCancelled = false
       printService.start()
     }
   }
   def cancel() {
-    printService.cancel()
+    //    printService.cancel()
+    jobCancelled = true
   }
   def pause() {}
   def resume() {}

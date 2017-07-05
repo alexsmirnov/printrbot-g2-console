@@ -4,6 +4,8 @@ import org.scalatest.WordSpec
 import org.scalatest.Matchers
 import spray.json._
 import DefaultJsonProtocol._ // if you don't supply your own Protocol (see below)
+import alexsmirnov.pbconsole.gcode.UnknownResponse
+import alexsmirnov.pbconsole.gcode.G2Response
 
 class ResponseParserTest extends WordSpec with Matchers {
   "parse" when { 

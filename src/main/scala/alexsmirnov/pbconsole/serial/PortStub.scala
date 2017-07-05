@@ -4,7 +4,7 @@ import alexsmirnov.stream.ReactiveOps._
 import org.reactivestreams._
 import java.util.concurrent.TimeUnit
 import scala.util.Random
-import alexsmirnov.pbconsole.Request
+import alexsmirnov.pbconsole.gcode.Request
 
 object PortStub {
   def g2(line: String) = Seq("""{"r":{"foo":"bar"},"f":[1,0,8]}""")
@@ -100,5 +100,9 @@ class PortStub(tr: String => Seq[String] = PortStub.smoothie, welcome: => String
 
   def subscribe(s: Subscriber[_ >: Byte]): Unit = {
     responser.subscribe(s)
+  }
+
+  def disconnect(reconnect: Boolean): Unit = {
+    ???
   }
 }

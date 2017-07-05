@@ -3,6 +3,7 @@ package alexsmirnov.pbconsole.print
 import org.scalatest.FlatSpec
 import scala.io.Source
 import org.scalatest.Matchers
+import alexsmirnov.pbconsole.gcode.GCode
 
 class GCodeParserTest extends FlatSpec with Matchers {
   

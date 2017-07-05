@@ -33,6 +33,7 @@ import scalafx.scene.control.ButtonBar
 import scalafx.scene.layout.Region
 import scalafx.scene.layout.VBox
 import scalafx.scene.control.ProgressBar
+import alexsmirnov.pbconsole.gcode.GCode
 
 object Job {
   val LOG = Logger.getLogger("alexsmirnov.pbconsole.print.Job")

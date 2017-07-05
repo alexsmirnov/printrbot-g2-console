@@ -1,4 +1,4 @@
-package alexsmirnov.pbconsole.print
+package alexsmirnov.pbconsole.gcode
 
 trait GCode {
  def command: String 

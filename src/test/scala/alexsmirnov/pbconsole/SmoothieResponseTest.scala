@@ -3,6 +3,14 @@ package alexsmirnov.pbconsole
 import org.scalatest.FlatSpec
 import org.scalatest.Matchers
 import org.scalatest.Inspectors
+import alexsmirnov.pbconsole.gcode.SmoothieResponse
+import alexsmirnov.pbconsole.gcode.StatusResponse
+import alexsmirnov.pbconsole.gcode.ExtruderTemp
+import alexsmirnov.pbconsole.gcode.ExtruderTarget
+import alexsmirnov.pbconsole.gcode.ExtruderOutput
+import alexsmirnov.pbconsole.gcode.BedTemp
+import alexsmirnov.pbconsole.gcode.BedTarget
+import alexsmirnov.pbconsole.gcode.BedOutput
 
 class SmoothieResponseTest extends FlatSpec with Matchers with Inspectors {
   "extruder temp response" should "generate status with temp" in {

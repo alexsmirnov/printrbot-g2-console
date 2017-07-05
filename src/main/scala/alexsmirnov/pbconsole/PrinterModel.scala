@@ -10,6 +10,11 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scalafx.beans.property.FloatProperty
 import scalafx.beans.property.DoubleProperty
+import alexsmirnov.pbconsole.serial.PrinterImpl
+import alexsmirnov.pbconsole.gcode.StatusResponse
+import alexsmirnov.pbconsole.gcode.ResponseValue
+import alexsmirnov.pbconsole.gcode.Request
+import alexsmirnov.pbconsole.gcode.QueryCommand
 
 object PrinterModel {
   class Heater {
@@ -24,7 +29,7 @@ object PrinterModel {
     val extruder = DoubleProperty(0.0)
   }
 }
-class PrinterModel(printer: Printer) {
+class PrinterModel(printer: PrinterImpl) {
   import PrinterModel._
   // Current status
   val connected = BooleanProperty(false)

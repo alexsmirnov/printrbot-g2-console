@@ -26,6 +26,12 @@ import scalafx.util.converter.FloatStringConverter
 import scalafx.scene.control.TextField
 import scalafx.scene.control.Spinner
 import scalafx.scene.control.SpinnerValueFactory
+import alexsmirnov.pbconsole.gcode.ExtruderTemp
+import alexsmirnov.pbconsole.gcode.ExtruderTarget
+import alexsmirnov.pbconsole.gcode.ExtruderOutput
+import alexsmirnov.pbconsole.gcode.BedTemp
+import alexsmirnov.pbconsole.gcode.BedTarget
+import alexsmirnov.pbconsole.gcode.BedOutput
 
 class TemperatureControl(printer: PrinterModel) {
   type DT = javafx.scene.chart.XYChart.Data[Number, Number]

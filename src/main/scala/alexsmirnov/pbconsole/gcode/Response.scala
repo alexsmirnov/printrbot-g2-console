@@ -1,4 +1,4 @@
-package alexsmirnov.pbconsole
+package alexsmirnov.pbconsole.gcode
 
 object Response {
 }

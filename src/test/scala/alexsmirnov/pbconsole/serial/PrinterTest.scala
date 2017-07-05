@@ -1,28 +1,33 @@
-package alexsmirnov.pbconsole
+package alexsmirnov.pbconsole.serial
 
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Semaphore
 
 import scala.collection.JavaConversions._
+import scala.concurrent.Await
 import scala.concurrent.Future
-import scala.concurrent.ExecutionContext
+import scala.concurrent.Promise
+import scala.concurrent.duration.Duration
 
-import org.scalatest.Finders
 import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.ThreadSignaler
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.fixture.FlatSpec
 import org.scalatest.time.SpanSugar._
 
-import alexsmirnov.pbconsole.serial.Port
-import alexsmirnov.pbconsole.serial.PortStub
-import scala.concurrent.Promise
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import alexsmirnov.pbconsole.CommandSource
+import alexsmirnov.pbconsole.gcode.ExtruderTemp
+import alexsmirnov.pbconsole.gcode.GCommand
+import alexsmirnov.pbconsole.gcode.QueryCommand
+import alexsmirnov.pbconsole.gcode.Request
+import alexgcode.smirnov.pbconsole.Response
+import alexgcode.smirnov.pbconsole.Responsgcode.eValue
+import alexsmirnov.pbconsole.SmoothieResponse
+import alexgcode.smirnov.pbconsole.StatusResponse
 
 class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
-  import ExecutionContext.Implicits._
-  type FixtureParam = (Semaphore, Printer)
+  import scala.concurrent.ExecutionContext.Implicits._
+  type FixtureParam = (Semaphore, PrinterImpl)
   val timeLimit = 2.seconds
 
   override val defaultTestSignaler = ThreadSignaler
@@ -30,7 +35,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
   def withFixture(test: OneArgTest) = {
 
     val semaphore = new Semaphore(0)
-    val printer = new Printer(new PortStub({ line: String =>
+    val printer = new PrinterImpl(new PortStub({ line: String =>
       semaphore.acquire()
       line match {
         case Request.GCmd(n) => Seq("ok " + n)
@@ -48,7 +53,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
     }
   }
 
-  def startAndWait(p: Printer) = {
+  def startAndWait(p: PrinterImpl) = {
     @volatile
     var connected = false
     val received = new CopyOnWriteArrayList[(CommandSource,Response)]
