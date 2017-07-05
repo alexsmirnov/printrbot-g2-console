@@ -3,13 +3,6 @@ package alexsmirnov.pbconsole.gcode
 import spray.json._
 import spray.json.DefaultJsonProtocol._
 import scala.util.Try
-import alexsmirnov.pbconsole.Comman
-import alexsmirnov.pbconsole.gcode.UnknownResponse
-import alexsmirnov.pbconsole.gcode.StatusResponse
-import alexsmirnov.pbconsole.gcode.Response
-import alexsmirnov.pbconsole.gcode.CommandResponsedResponse
-import alexsmirnov.pbconsole.Response
-import alexsmirnov.pbconsole.StatusResponse
 import spray.json.ParserInput.apply
 
 object G2Response {

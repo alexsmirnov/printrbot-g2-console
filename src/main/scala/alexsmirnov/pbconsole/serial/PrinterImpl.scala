@@ -1,7 +1,5 @@
 package alexsmirnov.pbconsole.serial
 
-import alexsmirnov.pbconsole.serial.Port
-import alexsmirnov.pbconsole.serial.PortStub
 import scala.collection.{ Map, Seq, mutable }
 import scalafx.beans.property.BooleanProperty
 import alexsmirnov.stream._
@@ -14,8 +12,8 @@ import alexsmirnov.pbconsole.gcode.CommandResponse
 import alexsmirnov.pbconsole.gcode.CommandRequest
 import alexsmirnov.pbconsole.gcode.Request
 import alexsmirnov.pbconsole.CommandSource
-import alexsmirnogcode.v.pbconsole.Response
-imporgcode.t alexsmirnov.pbconsole.SmoothieResponse
+import alexsmirnov.pbconsole.gcode.Response
+import alexsmirnov.pbconsole.gcode.SmoothieResponse
 import alexsmirnov.pbconsole.gcode.PlainTextRequest
 
 /**

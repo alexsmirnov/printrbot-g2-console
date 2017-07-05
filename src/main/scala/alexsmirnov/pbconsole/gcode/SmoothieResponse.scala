@@ -1,25 +1,6 @@
 package alexsmirnov.pbconsole.gcode
 
 import scala.util.Try
-import alexsmirnov.pbconsole.Response
-import alexsmirnov.pbconsole.ResponseValue
-import alexsmirnov.pbconsole.gcode.UnknownResponse
-import alexsmirnov.pbconsole.gcode.StatusOnlyResponse
-import alexsmirnov.pbconsole.gcode.ResponseValue
-import alexsmirnov.pbconsole.gcode.Response
-import alexsmirnov.pbconsole.gcode.PositionZ
-import alexsmirnov.pbconsole.gcode.PositionY
-import alexsmirnov.pbconsole.gcode.PositionX
-import alexsmirnov.pbconsole.gcode.PositionE
-import alexsmirnov.pbconsole.gcode.HaltedResponse
-import alexsmirnov.pbconsole.gcode.ExtruderTemp
-import alexsmirnov.pbconsole.gcode.ExtruderTarget
-import alexsmirnov.pbconsole.gcode.ExtruderOutput
-import alexsmirnov.pbconsole.gcode.EmptyCommandResponse
-import alexsmirnov.pbconsole.gcode.CommandResponseWithStatus
-import alexsmirnov.pbconsole.gcode.BedTemp
-import alexsmirnov.pbconsole.gcode.BedTarget
-import alexsmirnov.pbconsole.gcode.BedOutput
 
 object SmoothieResponse {
   case object float {

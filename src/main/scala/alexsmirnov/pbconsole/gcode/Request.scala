@@ -1,12 +1,8 @@
-package alexsmirnov.pbconsole
+package alexsmirnov.pbconsole.gcode
 
-import alexsmirnov.pbconsole.gcode.Response
 
-import alexsmirnov.pbconsole.gcode.CommandResponse.gcode
 
-import alexsmirnov.pbconsole.CommandResponse
 import alexsmirnov.pbconsole.CommandSource
-import alexsmirnov.pbconsole.Response
 
 sealed trait Request {
   def line: String
