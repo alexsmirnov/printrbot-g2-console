@@ -23,9 +23,10 @@ class GCodeParserTest extends FlatSpec with Matchers {
   "G0 with missed F parameter" should behave like parseTo("G0 X1 Y2 Z3 E100",GCode.G0Move(Some(1),Some(2),Some(3),Some(100),None,"G0 X1 Y2 Z3 E100"))
   "G1 with all parameters separated by spaces" should behave like parseTo("G1 X1 Y2 Z3 E100 F1500",GCode.G1Move(Some(1),Some(2),Some(3),Some(100),Some(1500),"G1 X1 Y2 Z3 E100 F1500"))
   "G1 with all parameters without spaces" should behave like parseTo("G1X1Y2Z3E100F1500",GCode.G1Move(Some(1),Some(2),Some(3),Some(100),Some(1500),"G1X1Y2Z3E100F1500"))
-  "M106 line" should behave like parseTo("M106 S200",GCode.GCommand("M106 S200"))
-  "M106 line with leading space" should behave like parseTo("  M106 S200",GCode.GCommand("M106 S200"))
-  "M106 line with comment" should behave like parseTo("  M106 S200 ; comment",GCode.GCommand("M106 S200 "))
+  "G28 line" should behave like parseTo("G28 X0",GCode.GCommand(28,"X0","G28 X0"))
+  "M106 line" should behave like parseTo("M106 S200",GCode.MCommand(106,"S200","M106 S200"))
+  "M106 line with leading space" should behave like parseTo("  M106 S200",GCode.MCommand(106,"S200","M106 S200"))
+  "M106 line with comment" should behave like parseTo("  M106 S200 ; comment",GCode.MCommand(106,"S200","M106 S200"))
   "estimate print" should "calculate boundaries and print time" in {
     val lines = Source.fromFile("3mmBox_export.gcode").getLines()
     val stats = GCode.estimatePrint(lines)

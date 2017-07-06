@@ -20,10 +20,10 @@ import alexsmirnov.pbconsole.gcode.ExtruderTemp
 import alexsmirnov.pbconsole.gcode.GCommand
 import alexsmirnov.pbconsole.gcode.QueryCommand
 import alexsmirnov.pbconsole.gcode.Request
-import alexgcode.smirnov.pbconsole.Response
-import alexgcode.smirnov.pbconsole.Responsgcode.eValue
-import alexsmirnov.pbconsole.SmoothieResponse
-import alexgcode.smirnov.pbconsole.StatusResponse
+import alexsmirnov.pbconsole.gcode.Response
+import alexsmirnov.pbconsole.gcode.ResponseValue
+import alexsmirnov.pbconsole.gcode.SmoothieResponse
+import alexsmirnov.pbconsole.gcode.StatusResponse
 
 class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
   import scala.concurrent.ExecutionContext.Implicits._

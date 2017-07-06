@@ -79,12 +79,12 @@ class JobModel(printer: PrinterModel, settings: Settings) {
               if (isActive()) {
                 cmd match {
                   case ExtTempAndWaitCommand(t) =>
-                    printer.sendLine(ExtTempCommand(t).command, CommandSource.Job)
+                    printer.sendLine(ExtTempCommand(t).line, CommandSource.Job)
                     while (printer.extruder.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
                   case BedTempAndWaitCommand(t) =>
-                    printer.sendLine(BedTempCommand(t).command, CommandSource.Job)
+                    printer.sendLine(BedTempCommand(t).line, CommandSource.Job)
                     while (printer.bed.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
-                  case _ => printer.sendLine(cmd.command, CommandSource.Job)
+                  case _ => printer.sendLine(cmd.line, CommandSource.Job)
                 }
                 task.updateProgress(currentStat.printTimeMinutes, fileStats().printTimeMinutes)
                 task.updateValue(currentStat)
