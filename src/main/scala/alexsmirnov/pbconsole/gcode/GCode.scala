@@ -52,7 +52,7 @@ object GCode {
     def extruder: Option[Float]
     def speed: Option[Float]
   }
-  
+
   case class G0Move(x: Option[Float], y: Option[Float], z: Option[Float], extruder: Option[Float], speed: Option[Float], line: String) extends Move
   object G0Move {
     def apply(p: Map[Char, Float], command: String) = new G0Move(p.get('X'), p.get('Y'), p.get('Z'), p.get('E').orElse(p.get('A')), p.get('F'), command)
@@ -79,33 +79,36 @@ object GCode {
   case class ExtTempAndWaitCommand(t: Float) extends Command {
     val line = s"M109 S$t"
   }
-  
+
   case class GCommand(n: Int, params: String, line: String) extends Command
-  
+
   case class MCommand(n: Int, params: String, line: String) extends Command
-  
+
   case class UnknownCommand(line: String) extends GCode
 
   case object EmptyCommand extends Command {
     val line = ""
   }
 
-  def stripComment(line: String) = NoComment.findFirstMatchIn(line).map(_.subgroups(0)).getOrElse("")
+  def stripComment(line: String) = NoComment.findFirstMatchIn(line).map(_.subgroups(0).trim).getOrElse("")
 
   def parseParams(params: String) = MoveParams.findAllMatchIn(params).map { m => m.subgroups(0).head -> (m.subgroups(1).toFloat) }.toMap
 
-  def parse(line: String): GCode = stripComment(line) match {
-    case "" => EmptyCommand
-    case G0Cmd(params) => G0Move(parseParams(params), line)
-    case G1Cmd(params) => G1Move(parseParams(params), line)
-    case G92Cmd(params) => G92SetPos(parseParams(params), line)
-    case M104Cmd(temp) => ExtTempCommand(temp.toFloat)
-    case M109Cmd(temp) => ExtTempAndWaitCommand(temp.toFloat)
-    case M140Cmd(temp) => BedTempCommand(temp.toFloat)
-    case M190Cmd(temp) => BedTempAndWaitCommand(temp.toFloat)
-    case GCmd(n,params) => GCommand(n.toInt,params,line)
-    case MCmd(n,params) => MCommand(n.toInt,params,line)
-    case other => UnknownCommand(other)
+  def apply(line: String): GCode = {
+    val strip = stripComment(line)
+    strip match {
+      case "" => EmptyCommand
+      case G0Cmd(params) => G0Move(parseParams(params), strip)
+      case G1Cmd(params) => G1Move(parseParams(params), strip)
+      case G92Cmd(params) => G92SetPos(parseParams(params), strip)
+      case M104Cmd(temp) => ExtTempCommand(temp.toFloat)
+      case M109Cmd(temp) => ExtTempAndWaitCommand(temp.toFloat)
+      case M140Cmd(temp) => BedTempCommand(temp.toFloat)
+      case M190Cmd(temp) => BedTempAndWaitCommand(temp.toFloat)
+      case GCmd(n, params) => GCommand(n.toInt, params, strip)
+      case MCmd(n, params) => MCommand(n.toInt, params, strip)
+      case other => UnknownCommand(other)
+    }
   }
 
   case class range(min: Float = Float.MaxValue, max: Float = Float.MinValue) {
@@ -130,7 +133,7 @@ object GCode {
   def processProgram(lines: Iterator[String])(callback: (GCode, Position, PrintStats) => Unit): PrintStats = {
     lines.foldLeft((EmptyStats, UnknownPosition)) { (stp, line) =>
       val (currentStats, currentPosition) = stp
-      parse(line) match {
+      apply(line) match {
         case EmptyCommand => stp
         case move: G92SetPos =>
           val nextPosition = currentPosition.moveTo(move)

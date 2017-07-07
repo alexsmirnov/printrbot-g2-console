@@ -12,7 +12,7 @@ import org.mockito.ArgumentMatchers._
 import org.reactivestreams.Subscription
 import org.mockito.ArgumentCaptor
 
-class PortInteractiveT extends FlatSpec with GivenWhenThen with Eventually  with MockitoSugar {
+class PortInteractive extends FlatSpec with GivenWhenThen with Eventually  with MockitoSugar {
   implicit override val patienceConfig =
   PatienceConfig(timeout = Span(60, Seconds), interval = Span(1, Seconds))
   "USB Serial port" should "connect and disconnect" in {

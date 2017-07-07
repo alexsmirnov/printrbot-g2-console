@@ -73,7 +73,7 @@ class PortStub(tr: String => Seq[String] = PortStub.smoothie, welcome: => String
         listeners.foreach(_(ev))
         receiver.request(100L)
         responser.request(100L)
-        responser.requestProducer(100)
+//        responser.requestProducer(100)
         responser.onNext(welcome)
       }
     }, 10, TimeUnit.MILLISECONDS)

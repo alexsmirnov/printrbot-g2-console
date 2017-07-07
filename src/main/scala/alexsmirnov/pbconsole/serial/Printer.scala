@@ -21,7 +21,7 @@ trait Printer {
    * @return true if commands submitted to queue, false if it full
    */
   def offerCommands(commands: Printer.Positioning => Iterator[GCode], src: CommandSource): Boolean
-
+  
   /**
    * Submit query to printer ( e.g ask for temperature, position or settings )
    * @param command GCode to send
@@ -45,13 +45,13 @@ trait Printer {
    * add listener for all responses received by printer
    * @param r
    */
-  def addReceiveListener(r: (CommandSource, Response) => Unit): Unit
+  def addReceiveListener(r: (Response,CommandSource) => Unit): Unit
 
   /**
    * add listener that will be called with for all lines sent to printer. Used to monitor printer communications
    * @param l
    */
-  def addSendListener(l: (CommandSource, GCode) => Unit): Unit
+  def addSendListener(l: (GCode,CommandSource) => Unit): Unit
 
   def start(): Unit
 

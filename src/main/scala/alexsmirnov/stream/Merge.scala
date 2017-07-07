@@ -9,6 +9,7 @@ class Merge[A] extends PublisherBase[A] { self =>
     def onComplete() { self.sendComplete() }
     def onError(t: Throwable) { self.sendError(t) }
   }
+  
   def addPublisher(p: Publisher[A]) {
     val sub = new BranchSubscriber
     p.subscribe(sub)

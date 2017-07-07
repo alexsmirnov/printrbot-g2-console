@@ -9,7 +9,7 @@ class GCodeParserTest extends FlatSpec with Matchers {
   
   def parseTo(cmd: String,expected: GCode) {
     it should s"parsed as $expected" in { 
-       assert( GCode.parse(cmd) === expected)
+       assert( GCode.apply(cmd) === expected)
     }
   }
   
@@ -27,6 +27,9 @@ class GCodeParserTest extends FlatSpec with Matchers {
   "M106 line" should behave like parseTo("M106 S200",GCode.MCommand(106,"S200","M106 S200"))
   "M106 line with leading space" should behave like parseTo("  M106 S200",GCode.MCommand(106,"S200","M106 S200"))
   "M106 line with comment" should behave like parseTo("  M106 S200 ; comment",GCode.MCommand(106,"S200","M106 S200"))
+  "Empty line" should behave like parseTo("",GCode.EmptyCommand)
+  "Blank line" should behave like parseTo("   ",GCode.EmptyCommand)
+  "Comment line" should behave like parseTo("; comment",GCode.EmptyCommand)
   "estimate print" should "calculate boundaries and print time" in {
     val lines = Source.fromFile("3mmBox_export.gcode").getLines()
     val stats = GCode.estimatePrint(lines)

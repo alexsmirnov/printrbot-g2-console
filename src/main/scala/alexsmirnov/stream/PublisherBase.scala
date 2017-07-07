@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit
     
     def isStarted = started
 
-    class SubscriptionImpl extends Subscription {
+    private class SubscriptionImpl extends Subscription {
       def cancel() = stopProducer()
       def request(n: Long) = requestProducer(n)
     }
@@ -39,20 +39,30 @@ import java.util.concurrent.TimeUnit
       }
       started
     }
+    
+    def offer(a:A): Boolean = doSync {
+      if(started && requested > 0) {
+        subscriber.onNext(a)
+        requested -= 1L
+        true
+      } else false
+    }
+    
     def sendComplete() {
       require(subscriber != null, "Producer has no subscriber")
       subscriber.onComplete()
     }
+    
     def sendError(t: Throwable) {
       require(subscriber != null, "Producer has no subscriber")
       subscriber.onError(t)
     }
 
-    def onStart(): Unit
+    protected def onStart(): Unit
 
-    def onStop(): Unit
+    protected def onStop(): Unit
 
-    def requestProducer(n: Long) = doSync {
+    private def requestProducer(n: Long) = doSync {
       if (!started) {
         requested = n
         started = true
@@ -63,7 +73,7 @@ import java.util.concurrent.TimeUnit
       }
     }
 
-    def stopProducer() = doSync {
+    protected def stopProducer() = doSync {
       if (started) {
         started = false;
         requested = 0
