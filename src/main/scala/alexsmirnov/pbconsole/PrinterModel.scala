@@ -59,24 +59,24 @@ class PrinterModel(printer: PrinterImpl) {
   
   def sendLine(line: String,src: CommandSource): Unit = {
     setPositioning(line)
-    printer.sendData(Request(line,src))
+//    printer.sendData(Request(line,src))
   }
   
   def sendQuery(query: String,src: CommandSource): Future[List[ResponseValue]] = {
     setPositioning(query)
     val promise = Promise[List[ResponseValue]]
-    printer.sendData(QueryCommand(query,src,{
-      case sr: StatusResponse => promise.success(sr.values)
-      case other => promise.failure(new Throwable(s"unexpected response $other"))
-    }))
+//    printer.sendData(QueryCommand(query,src,{
+//      case sr: StatusResponse => promise.success(sr.values)
+//      case other => promise.failure(new Throwable(s"unexpected response $other"))
+//    }))
     promise.future
   }
 
   def addReceiveListener(listener: (CommandSource,String) => Unit) = {
-    printer.addReceiveListener {(s,l) => runInFxThread(listener(s,l.rawLine))}
+    printer.addReceiveListener {(r,s) => runInFxThread(listener(s,r.rawLine))}
   }
   
   def addSendListener(listener: (CommandSource,String) => Unit) = {
-    printer.addSendListener {l => runInFxThread(listener(l.source,l.line))}
+//    printer.addSendListener {l => runInFxThread(listener(l.source,l.line))}
   }
 }

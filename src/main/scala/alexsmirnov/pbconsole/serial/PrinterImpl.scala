@@ -9,12 +9,13 @@ import scala.collection.immutable.Queue
 import org.reactivestreams.Processor
 import org.reactivestreams.Publisher
 import alexsmirnov.pbconsole.gcode.CommandResponse
-import alexsmirnov.pbconsole.gcode.CommandRequest
-import alexsmirnov.pbconsole.gcode.Request
 import alexsmirnov.pbconsole.CommandSource
 import alexsmirnov.pbconsole.gcode.Response
 import alexsmirnov.pbconsole.gcode.SmoothieResponse
 import alexsmirnov.pbconsole.gcode.PlainTextRequest
+import alexsmirnov.pbconsole.gcode.GCode
+import scala.concurrent.Future
+import scala.concurrent.Promise
 
 /**
  * @author asmirnov
@@ -29,8 +30,34 @@ object PrinterImpl {
     }
     new PrinterImpl(port, SmoothieResponse(_))
   }
+
+  sealed trait Request {
+    def gcode: GCode
+    def src: CommandSource
+    def onResponse(response: Response): Unit
+    def onComplete(response: Response): Unit
+  }
+  type RequestProducer = Printer.Positioning => Iterator[Request]
+
+  class SimpleRequest(val gcode: GCode, val src: CommandSource) extends Request {
+    def onResponse(response: Response) = ()
+    def onComplete(response: Response) = ()
+  }
+  class QueryRequest(val gcode: GCode, val src: CommandSource, promise: Promise[List[Response]]) extends Request {
+    private[this] var responses: List[Response] = Nil
+    def onResponse(response: Response) = responses = response :: responses
+    def onComplete(response: Response) = promise.success((response :: responses).reverse)
+  }
+
+  def singleCommand(gc: GCode, source: CommandSource): RequestProducer = { pp =>
+    Iterator.single(new SimpleRequest(gc, source))
+  }
+
 }
-class PrinterImpl(port: Port, responseParser: String => Response,queueSize: Int = 4) {
+
+class PrinterImpl(port: Port, responseParser: String => Response, queueSize: Int = 4) extends Printer {
+
+  import PrinterImpl._
 
   def start() {
     port.run()
@@ -40,32 +67,34 @@ class PrinterImpl(port: Port, responseParser: String => Response,queueSize: Int 
     port.close()
   }
 
+  def reconnect() = port.disconnect(true)
+
   // Build output pipeline. each source has it's own asynchonous stream to not block concurrent sources
-  val data = Seq[CommandSource](CommandSource.Console,CommandSource.Job,CommandSource.Monitor).
-                 map{ s => s-> new SimplePublisher[Request] }.toMap
+  val data = new SimplePublisher[(GCode, CommandSource)]
+  val commands = new SimplePublisher[RequestProducer]
 
   @volatile
-  var commandsStack: Queue[CommandRequest] = Queue.empty
+  var commandsStack: Queue[Request] = Queue.empty
 
-  val linemode = new Processor[Request,Request] with PublisherBase[Request] with SubscriberBase[Request] {
+  val linemode = new Processor[Request, Request] with PublisherBase[Request] with SubscriberBase[Request] {
     def clearStack() { this.synchronized(commandsStack = Queue.empty) }
-    def onStart() { clearStack();request(queueSize) }
-    def onStop() { cancel();clearStack() }
+    def onStart() { clearStack(); request(queueSize) }
+    def onStop() { cancel(); clearStack() }
 
     def onComplete() = {
       sendComplete()
       clearStack()
     }
-    
+
     def onError(t: Throwable) {
       stopProducer()
       sendError(t)
       clearStack()
     }
     def onNext(r: Request) {
-      r match {
-        case cr: CommandRequest =>
-          this.synchronized(commandsStack = commandsStack.enqueue(cr))
+      r.gcode match {
+        case cr: GCode.Command =>
+          this.synchronized(commandsStack = commandsStack.enqueue(r))
           sendNext(r)
         case _ =>
           sendNext(r)
@@ -81,38 +110,47 @@ class PrinterImpl(port: Port, responseParser: String => Response,queueSize: Int 
         case cr: CommandResponse =>
           linemode.synchronized(commandsStack.dequeueOption.
             map { case (command, queue) => commandsStack = queue; command }).map { command =>
-            command.onCommandResponse(cr); linemode.request(1L)
-            command.source
+            command.onComplete(cr); linemode.request(1L)
+            command.src
           }
         case r => linemode.synchronized(commandsStack.headOption).map { command =>
           command.onResponse(r)
-          command.source
+          command.src
         }
       }
       sendNext(source.getOrElse(CommandSource.Unknown) -> resp)
       request(1L)
     }
   }
-  
 
-  val dataLine = merge(data.values.toSeq.map(_.async(10)): _*).transform(linemode)
+  var positioning: Printer.Positioning = _
 
-  val commands = new SimplePublisher[Request]
+  val dataLine = data.map { case (gc, src) => singleCommand(gc, src) }.merge(commands.async(5)).flatMap { rp => rp(positioning).toTraversable }.transform(linemode)
 
-  val lines = dataLine.merge(commands.async()).fork
-  lines.map(_.line).transform(linesToBytes).subscribe(port)
+  val lines = dataLine.fork
+  lines.map(_.gcode.line).transform(linesToBytes).subscribe(port)
 
   // input pipeline
   val responses = port.transform(toLines).map(responseParser(_)).transform(barrier).fork
 
   def addStateListener(l: Port.StateEvent => Unit) = port.addStateListener(l)
 
-  def sendLine(line: String): Unit = { commands.sendNext(PlainTextRequest(line, CommandSource.Console)) }
+  def offerCommands(cmds: Printer.Positioning => Iterator[GCode], src: CommandSource): Boolean =
+    commands.offer({ rp => cmds(rp).map { gcode => new PrinterImpl.SimpleRequest(gcode, src) } })
 
-  def sendData(dataLine: Request): Unit = data(dataLine.source).sendNext(dataLine)
+  def query(command: GCode, src: CommandSource): Future[List[Response]] = {
+    val promise = Promise[List[Response]]
+    if (commands.offer({ rp => Iterator.single(new PrinterImpl.QueryRequest(command, src, promise)) })) {
+      promise.future
+    } else {
+      Future.failed(new Exception("command queue full"))
+    }
+  }
 
-  def addReceiveListener(r: (CommandSource, Response) => Unit): Unit = responses.subscribe(listener({ case (s, resp) => r(s, resp) }))
+  def sendData(command: GCode, src: CommandSource): Unit = data.sendNext(command -> src)
 
-  def addSendListener(l: Request => Unit): Unit = lines.subscribe(listener(l))
+  def addReceiveListener(r: (Response, CommandSource) => Unit): Unit = responses.subscribe(listener({ case (resp, s) => r(s, resp) }))
+
+  def addSendListener(l: (GCode, CommandSource) => Unit): Unit = ??? // lines.subscribe(listener(l))
 
 }

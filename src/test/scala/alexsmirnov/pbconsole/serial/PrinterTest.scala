@@ -52,101 +52,101 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests {
       printer.stop()
     }
   }
-
-  def startAndWait(p: PrinterImpl) = {
-    @volatile
-    var connected = false
-    val received = new CopyOnWriteArrayList[(CommandSource,Response)]
-    p.addReceiveListener { (s, r) => received.add(s -> r) }
-    p.addStateListener {
-      case Port.Connected(_, _) => connected = true
-      case Port.Disconnected => connected = false
-    }
-    p.start()
-    eventually {
-      assert(connected === true)
-    }
-    received
-  }
-
-  val dataStream = Stream.from(1).map { n => GCommand(s"G$n X$n Y$n", CommandSource.Console) }
-  val commandStream = Stream.from(1).map { n => "{sr:{}}" }
-
-  "Printer" should "set connected on connect" in { fp =>
-    val (semaphore, p) = fp
-    startAndWait(p)
-  }
-  
-  it should "send data with back pressure" in { fp =>
-    val (semaphore, p) = fp
-    startAndWait(p)
-    Future(dataStream.take(20).foreach(p.sendData))
-    Thread.sleep(150)
-    assert(p.commandsStack.size === 4)
-    semaphore.release(5)
-    Thread.sleep(150)
-    assert(p.commandsStack.size === 4)
-    semaphore.release(13)
-    Thread.sleep(150)
-    assert(p.commandsStack.size === 2)
-    semaphore.release(10)
-    Thread.sleep(150)
-    assert(p.commandsStack.size === 0)
-  }
-
-  it should "send commands immediately" in { fp =>
-    val (semaphore, p) = fp
-    startAndWait(p)
-    semaphore.release(105)
-    val data = Future(Stream.from(1).map { n => GCommand(s"G1X$n Y$n", CommandSource.Console) }.take(50).foreach(p.sendData _))
-    val start = System.currentTimeMillis()
-    commandStream.take(50).foreach(p.sendLine)
-    assert((System.currentTimeMillis() - start) < 20)
-  }
-
-  it should "receive all responses in sent order" in { fp =>
-    val (semaphore, p) = fp
-    val received = startAndWait(p)
-    semaphore.release(105)
-    val data = Future(dataStream.take(100).foreach(p.sendData))
-    eventually(timeout(timeLimit))(assert(received.size >= 101))
-    received.zipWithIndex.tail.foreach { case ((s,r),i) => assert(r.rawLine === s"ok $i") }
-  }
-  
-  it should "assign source to response" in { fp =>
-    val (semaphore, p) = fp
-    val received = startAndWait(p)
-    val sources = Seq[CommandSource](CommandSource.Console,CommandSource.Job,CommandSource.Monitor,CommandSource.Job,CommandSource.Monitor)
-    semaphore.release(10)
-    val data = Future(sources.map(Request("M1",_)).foreach(p.sendData))
-    eventually(timeout(timeLimit))(assert(received.size > sources.size))
-    received.tail.zip(sources).foreach { case ((s,r),es) => assert(s === es) }
-  }
-  it should "receive temperature in callback" in { fp =>
-    val (semaphore, p) = fp
-    semaphore.release(10)
-    val received = startAndWait(p)
-    val responsePromise = Promise[List[ResponseValue]]()
-    p.sendData(QueryCommand("M105",CommandSource.Monitor,{
-      case sr: StatusResponse => responsePromise.success(sr.values)
-      case other => responsePromise.failure(new Throwable(s"unexpected response $other"))
-    }))
-    val result = Await.result(responsePromise.future, Duration(2,"sec"))
-    println(result)
-    assert(result.exists { _ == ExtruderTemp(20.0f) })
-  }
-  it should "receive temperature during print activity" in { fp =>
-    val (semaphore, p) = fp
-    semaphore.release(10)
-    val received = startAndWait(p)
-    val data = Future(Stream.from(1).map { n => GCommand(s"G1X$n Y$n", CommandSource.Job) }.foreach{ c=> p.sendData(c);semaphore.release(1)})
-    val responsePromise = Promise[List[ResponseValue]]()
-    p.sendData(QueryCommand("M105",CommandSource.Monitor,{
-      case sr: StatusResponse => responsePromise.success(sr.values)
-      case other => responsePromise.failure(new Throwable(s"unexpected response $other"))
-    }))
-    val result = Await.result(responsePromise.future, Duration(2,"sec"))
-    println(result)
-    assert(result.exists { _ == ExtruderTemp(20.0f) })
-  }
+//
+//  def startAndWait(p: PrinterImpl) = {
+//    @volatile
+//    var connected = false
+//    val received = new CopyOnWriteArrayList[(CommandSource,Response)]
+//    p.addReceiveListener { (s, r) => received.add(s -> r) }
+//    p.addStateListener {
+//      case Port.Connected(_, _) => connected = true
+//      case Port.Disconnected => connected = false
+//    }
+//    p.start()
+//    eventually {
+//      assert(connected === true)
+//    }
+//    received
+//  }
+//
+//  val dataStream = Stream.from(1).map { n => GCommand(s"G$n X$n Y$n", CommandSource.Console) }
+//  val commandStream = Stream.from(1).map { n => "{sr:{}}" }
+//
+//  "Printer" should "set connected on connect" in { fp =>
+//    val (semaphore, p) = fp
+//    startAndWait(p)
+//  }
+//  
+//  it should "send data with back pressure" in { fp =>
+//    val (semaphore, p) = fp
+//    startAndWait(p)
+//    Future(dataStream.take(20).foreach(p.sendData))
+//    Thread.sleep(150)
+//    assert(p.commandsStack.size === 4)
+//    semaphore.release(5)
+//    Thread.sleep(150)
+//    assert(p.commandsStack.size === 4)
+//    semaphore.release(13)
+//    Thread.sleep(150)
+//    assert(p.commandsStack.size === 2)
+//    semaphore.release(10)
+//    Thread.sleep(150)
+//    assert(p.commandsStack.size === 0)
+//  }
+//
+//  it should "send commands immediately" in { fp =>
+//    val (semaphore, p) = fp
+//    startAndWait(p)
+//    semaphore.release(105)
+//    val data = Future(Stream.from(1).map { n => GCommand(s"G1X$n Y$n", CommandSource.Console) }.take(50).foreach(p.sendData _))
+//    val start = System.currentTimeMillis()
+//    commandStream.take(50).foreach(p.sendLine)
+//    assert((System.currentTimeMillis() - start) < 20)
+//  }
+//
+//  it should "receive all responses in sent order" in { fp =>
+//    val (semaphore, p) = fp
+//    val received = startAndWait(p)
+//    semaphore.release(105)
+//    val data = Future(dataStream.take(100).foreach(p.sendData))
+//    eventually(timeout(timeLimit))(assert(received.size >= 101))
+//    received.zipWithIndex.tail.foreach { case ((s,r),i) => assert(r.rawLine === s"ok $i") }
+//  }
+//  
+//  it should "assign source to response" in { fp =>
+//    val (semaphore, p) = fp
+//    val received = startAndWait(p)
+//    val sources = Seq[CommandSource](CommandSource.Console,CommandSource.Job,CommandSource.Monitor,CommandSource.Job,CommandSource.Monitor)
+//    semaphore.release(10)
+//    val data = Future(sources.map(Request("M1",_)).foreach(p.sendData))
+//    eventually(timeout(timeLimit))(assert(received.size > sources.size))
+//    received.tail.zip(sources).foreach { case ((s,r),es) => assert(s === es) }
+//  }
+//  it should "receive temperature in callback" in { fp =>
+//    val (semaphore, p) = fp
+//    semaphore.release(10)
+//    val received = startAndWait(p)
+//    val responsePromise = Promise[List[ResponseValue]]()
+//    p.sendData(QueryCommand("M105",CommandSource.Monitor,{
+//      case sr: StatusResponse => responsePromise.success(sr.values)
+//      case other => responsePromise.failure(new Throwable(s"unexpected response $other"))
+//    }))
+//    val result = Await.result(responsePromise.future, Duration(2,"sec"))
+//    println(result)
+//    assert(result.exists { _ == ExtruderTemp(20.0f) })
+//  }
+//  it should "receive temperature during print activity" in { fp =>
+//    val (semaphore, p) = fp
+//    semaphore.release(10)
+//    val received = startAndWait(p)
+//    val data = Future(Stream.from(1).map { n => GCommand(s"G1X$n Y$n", CommandSource.Job) }.foreach{ c=> p.sendData(c);semaphore.release(1)})
+//    val responsePromise = Promise[List[ResponseValue]]()
+//    p.sendData(QueryCommand("M105",CommandSource.Monitor,{
+//      case sr: StatusResponse => responsePromise.success(sr.values)
+//      case other => responsePromise.failure(new Throwable(s"unexpected response $other"))
+//    }))
+//    val result = Await.result(responsePromise.future, Duration(2,"sec"))
+//    println(result)
+//    assert(result.exists { _ == ExtruderTemp(20.0f) })
+//  }
 }

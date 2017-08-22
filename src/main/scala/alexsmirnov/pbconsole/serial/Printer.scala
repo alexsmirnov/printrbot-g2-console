@@ -8,6 +8,7 @@ import scala.concurrent.Future
 
 object Printer {
   case class Positioning(absolute: Boolean = true, extruderAbsolute: Boolean = true)
+  type GCodeProducer = Positioning => Iterator[GCode]
 }
 
 trait Printer {
@@ -20,7 +21,7 @@ trait Printer {
    * @param src source service
    * @return true if commands submitted to queue, false if it full
    */
-  def offerCommands(commands: Printer.Positioning => Iterator[GCode], src: CommandSource): Boolean
+  def offerCommands(commands: Printer.GCodeProducer, src: CommandSource): Boolean
   
   /**
    * Submit query to printer ( e.g ask for temperature, position or settings )
@@ -34,12 +35,10 @@ trait Printer {
   /**
    * Send all commands from iterator to printer, used to print job. Lines can interleave with
    * other submitted by offerCommand and query.
-   * @param commands print job content
+   * @param command print job command
    * @param src source service
-   * @return Future that will be completed when print is done. Return failed Future if error happens
-   * during print, printer disconnected or there is another job in progress
    */
-  def sendData(commands: Iterator[GCode], src: CommandSource): Future[Int]
+  def sendData(command: GCode, src: CommandSource): Unit
 
   /**
    * add listener for all responses received by printer
