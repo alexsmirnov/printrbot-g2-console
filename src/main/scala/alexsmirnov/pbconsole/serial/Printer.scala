@@ -38,7 +38,7 @@ trait Printer {
    * @param command print job command
    * @param src source service
    */
-  def sendData(command: GCode, src: CommandSource): Unit
+  def sendData(command: GCode, src: CommandSource): Boolean
 
   /**
    * add listener for all responses received by printer

@@ -147,7 +147,7 @@ class PrinterImpl(port: Port, responseParser: String => Response, queueSize: Int
     }
   }
 
-  def sendData(command: GCode, src: CommandSource): Unit = data.sendNext(command -> src)
+  def sendData(command: GCode, src: CommandSource): Boolean = data.sendNext(command -> src)
 
   def addReceiveListener(r: (Response, CommandSource) => Unit): Unit = responses.subscribe(listener({ case (resp, s) => r(s, resp) }))
 
