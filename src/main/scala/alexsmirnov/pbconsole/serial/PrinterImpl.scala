@@ -78,7 +78,10 @@ class PrinterImpl(port: Port, responseParser: String => Response, queueSize: Int
 
   val linemode = new Processor[Request, Request] with PublisherBase[Request] with SubscriberBase[Request] {
     def clearStack() { this.synchronized(commandsStack = Queue.empty) }
-    def onStart() { clearStack(); request(queueSize) }
+    def onStart() {
+      positioning = Printer.Positioning(true, true)
+      clearStack(); request(queueSize)
+    }
     def onStop() { cancel(); clearStack() }
 
     def onComplete() = {
@@ -123,9 +126,19 @@ class PrinterImpl(port: Port, responseParser: String => Response, queueSize: Int
     }
   }
 
-  var positioning: Printer.Positioning = _
-
-  val dataLine = data.map { case (gc, src) => singleCommand(gc, src) }.merge(commands.async(5)).flatMap { rp => rp(positioning).toTraversable }.transform(linemode)
+  @volatile
+  var positioning: Printer.Positioning = Printer.Positioning(true, true)
+  private def setPositioning(gcode: GCode) = gcode match {
+    case GCode.GCommand(90, _, _) => positioning = Printer.Positioning(true, true)
+    case GCode.GCommand(91, _, _) => positioning = Printer.Positioning(false, false)
+    case GCode.MCommand(82, _, _) => positioning = positioning.copy(extruderAbsolute = true)
+    case GCode.MCommand(83, _, _) => positioning = positioning.copy(extruderAbsolute = false)
+    case _ => ()
+  }
+  val dataLine = data.map { case (gc, src) => singleCommand(gc, src) }.
+    merge(commands.async(5)).
+    flatMap { rp => rp(positioning).map { req => setPositioning(req.gcode); req }.toTraversable }.
+    transform(linemode)
 
   val lines = dataLine.fork
   lines.map(_.gcode.line).transform(linesToBytes).subscribe(port)
