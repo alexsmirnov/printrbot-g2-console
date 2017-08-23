@@ -148,7 +148,7 @@ class PrinterImpl(port: Port, responseParser: String => Response, queueSize: Int
 
   def addStateListener(l: Port.StateEvent => Unit) = port.addStateListener(l)
 
-  def offerCommands(cmds: Printer.Positioning => Iterator[GCode], src: CommandSource): Boolean =
+  def offerCommands(cmds: Printer.GCodeProducer, src: CommandSource): Boolean =
     commands.offer({ rp => cmds(rp).map { gcode => new PrinterImpl.SimpleRequest(gcode, src) } })
 
   def query(command: GCode, src: CommandSource): Future[List[Response]] = {
@@ -164,6 +164,6 @@ class PrinterImpl(port: Port, responseParser: String => Response, queueSize: Int
 
   def addReceiveListener(r: (Response, CommandSource) => Unit): Unit = responses.subscribe(listener({ case (resp, s) => r(s, resp) }))
 
-  def addSendListener(l: (GCode, CommandSource) => Unit): Unit = ??? // lines.subscribe(listener(l))
+  def addSendListener(l: (GCode, CommandSource) => Unit): Unit = lines.subscribe(listener({ req => l(req.gcode, req.src) })) // lines.subscribe(listener(l))
 
 }

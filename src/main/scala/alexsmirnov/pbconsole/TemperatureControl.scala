@@ -32,6 +32,7 @@ import alexsmirnov.pbconsole.gcode.ExtruderOutput
 import alexsmirnov.pbconsole.gcode.BedTemp
 import alexsmirnov.pbconsole.gcode.BedTarget
 import alexsmirnov.pbconsole.gcode.BedOutput
+import alexsmirnov.pbconsole.gcode.GCode
 
 class TemperatureControl(printer: PrinterModel) {
   type DT = javafx.scene.chart.XYChart.Data[Number, Number]
@@ -69,7 +70,7 @@ class TemperatureControl(printer: PrinterModel) {
     series("Bed target", bedTargetData))
 
   val scheduler = {
-    val s = ScheduledService(Task { if (printer.connected()) Await.result(printer.sendQuery("M105", CommandSource.Monitor), 5.seconds) else Nil })
+    val s = ScheduledService(Task { if (printer.connected()) Await.result(printer.query(GCode("M105"), CommandSource.Monitor), 5.seconds) else Nil })
     s.period = FXDuration(2000.0)
     s.delay = FXDuration(2000.0)
     s.restartOnFailure = true
@@ -101,7 +102,7 @@ class TemperatureControl(printer: PrinterModel) {
   val chart = new LineChart[Number, Number](xAxis, yAxis, allDataSeries)
   chart.createSymbols = false
 
-  def tempControl(title: String, heater: PrinterModel.Heater, command: Float => String): Node = {
+  def tempControl(title: String, heater: PrinterModel.Heater, command: Float => GCode): Node = {
     val temperatureValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 300, 0, 5)
     val temperature = new Spinner[Integer] {
       editable = true
@@ -127,7 +128,7 @@ class TemperatureControl(printer: PrinterModel) {
         children = List(
           new Button {
             text = "Off"
-            onAction = { ae: ActionEvent => printer.sendLine(command(0), CommandSource.Monitor) }
+            onAction = { ae: ActionEvent => printer.offer(command(0), CommandSource.Monitor) }
             disable <== printer.connected.not()
           },
           temperature,
@@ -136,7 +137,7 @@ class TemperatureControl(printer: PrinterModel) {
             disable <== printer.connected.not()
             onAction = { ae: ActionEvent =>
               temperature.increment(0)
-              printer.sendLine(command(temperature.value().toFloat), CommandSource.Monitor)
+              printer.offer(command(temperature.value().toFloat), CommandSource.Monitor)
             }
           })
       }
@@ -145,7 +146,7 @@ class TemperatureControl(printer: PrinterModel) {
   val node = new VBox {
     children = List(
       chart,
-      tempControl("Extruder", printer.extruder, { t => s"M104 S$t" }),
-      tempControl("Heated Bed", printer.bed, { t => s"M140 S$t" }))
+      tempControl("Extruder", printer.extruder, { t => GCode.ExtTempCommand(t) }),
+      tempControl("Heated Bed", printer.bed, { t => GCode.BedTempCommand(t) }))
   }
 }

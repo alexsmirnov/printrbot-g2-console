@@ -16,6 +16,7 @@ import alexsmirnov.pbconsole.gcode.ResponseValue
 import alexsmirnov.pbconsole.gcode.Request
 import alexsmirnov.pbconsole.gcode.QueryCommand
 import alexsmirnov.pbconsole.gcode.GCode
+import alexsmirnov.pbconsole.serial.Printer
 
 object PrinterModel {
   class Heater {
@@ -49,11 +50,15 @@ class PrinterModel(printer: PrinterImpl) {
     case Port.Disconnected => false
   })
 
-  def offerCommand(gcode: GCode, src: CommandSource): Boolean = {
-    printer.offerCommands({ _ => Iterator.single(gcode) }, src)
+  def offer(gcode: GCode, src: CommandSource): Boolean = {
+    offer({ _ => Iterator.single(gcode) }, src)
   }
 
-  def offerQuery(gcode: GCode, src: CommandSource): Future[List[ResponseValue]] = {
+  def offer(producer: Printer.GCodeProducer, src: CommandSource): Boolean = {
+    printer.offerCommands(producer, src)
+  }
+  
+  def query(gcode: GCode, src: CommandSource): Future[List[ResponseValue]] = {
     printer.query(gcode, src).map { rsps =>
       rsps.flatMap {
         case sr: StatusResponse => sr.values
@@ -61,6 +66,8 @@ class PrinterModel(printer: PrinterImpl) {
       }
     }
   }
+  
+  def print(gcode: GCode) = printer.sendData(gcode, CommandSource.Job)
 
   def addReceiveListener(listener: (CommandSource, String) => Unit) = {
     printer.addReceiveListener { (r, s) => runInFxThread(listener(s, r.rawLine)) }

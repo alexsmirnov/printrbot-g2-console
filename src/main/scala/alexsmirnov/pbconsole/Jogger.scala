@@ -15,6 +15,8 @@ import scalafx.scene.layout.FlowPane
 import scalafx.geometry.Insets
 import javafx.scene.layout.Priority
 import scalafx.geometry.Pos
+import alexsmirnov.pbconsole.serial.Printer
+import alexsmirnov.pbconsole.gcode.GCode
 
 class Jogger(printer: PrinterModel, settings: Settings) {
 
@@ -27,24 +29,22 @@ class Jogger(printer: PrinterModel, settings: Settings) {
   def macroButton(label: String, commands: String*): Node = new Button(label) {
     minWidth = 45
     minHeight = 45
-    onAction = { ae: ActionEvent => commands.foreach(printer.sendLine(_, CommandSource.Monitor)) }
+    onAction = { ae: ActionEvent => printer.offer({ _ => commands.map(GCode(_)).iterator}, CommandSource.Monitor) }
     disable <== printer.connected.not()
   }
-  def move(axis: String, distance: String) {
-    val relative: Boolean = printer.relativePositioning()
-    if (!relative) printer.sendLine("G91", CommandSource.Monitor)
-    printer.sendLine("G0 " + axis + distance, CommandSource.Monitor)
-    if (!relative) printer.sendLine("G90", CommandSource.Monitor)
-  }
+  def move(axis: String, distance: String) = printer.offer({ pos =>
+    val command = GCode("G0 " + axis + distance)
+    if (pos.absolute) Iterator(GCode("G91"),command,GCode("G90")) else Iterator.single(command)
+  },CommandSource.Monitor)
+  
   def moveX(distance: String): Unit = move("X", distance)
   def moveY(distance: String): Unit = move("Y", distance)
   def moveZ(distance: String): Unit = move("Z", distance)
-  def moveE(distance: String): Unit = {
-    val relative: Boolean = printer.extruderRelativePositioning()
-    if (!relative) printer.sendLine("M83", CommandSource.Monitor)
-    printer.sendLine("G0 E" + distance, CommandSource.Monitor)
-    if (!relative) printer.sendLine("M82", CommandSource.Monitor)
-  }
+  def moveE(distance: String): Unit = printer.offer({ pos =>
+    val cmd = GCode("G0 E" + distance)
+    if (pos.absolute) Iterator(GCode("M83"),cmd,GCode("M83")) else Iterator(cmd)
+  },CommandSource.Monitor)
+  
   val steps = List("0.1", "1", "10")
   val allSteps = steps.reverse.map("-" + _).zipWithIndex ++: (steps.zipWithIndex.map { case (t, n) => t -> (n + steps.size + 1) })
   val xyJogger = {
@@ -89,7 +89,7 @@ class Jogger(printer: PrinterModel, settings: Settings) {
     new Button() {
       margin = Insets(5)
       text <== m.nameProperty
-      onAction = { ae: ActionEvent => Macro.prepare(m.content, settings).foreach(printer.sendLine(_, CommandSource.Monitor)) }
+      onAction = { ae: ActionEvent => printer.offer({ _ => Macro.prepare(m.content, settings).map(GCode(_))}, CommandSource.Monitor) }
       disable <== printer.connected.not()
     }.delegate
   }

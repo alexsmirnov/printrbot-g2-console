@@ -67,7 +67,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
       def isActive(): Boolean = !(jobCancelled || task.isCancelled())
       def call() = {
         // add 20 minutes for heatind and 10% for possible error
-        val caffe = Process(Seq("caffeinate", "-i", "-t", ((jobStats().printTimeMinutes + 20) * 66).toInt.toString())).run()
+        val caffe = Process(Seq("caffeinate", "-i", "-t", ((jobStats().printTimeMinutes + 20) * 66).toInt.toString())).!
         gcodeFile().foreach { file =>
           task.updateProgress(0.0, fileStats().printTimeMinutes)
           val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
@@ -79,12 +79,12 @@ class JobModel(printer: PrinterModel, settings: Settings) {
               if (isActive()) {
                 cmd match {
                   case ExtTempAndWaitCommand(t) =>
-                    printer.sendLine(ExtTempCommand(t).line, CommandSource.Job)
+                    printer.print(ExtTempCommand(t))
                     while (printer.extruder.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
                   case BedTempAndWaitCommand(t) =>
-                    printer.sendLine(BedTempCommand(t).line, CommandSource.Job)
+                    printer.print(BedTempCommand(t))
                     while (printer.bed.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
-                  case _ => printer.sendLine(cmd.line, CommandSource.Job)
+                  case _ => printer.print(cmd)
                 }
                 task.updateProgress(currentStat.printTimeMinutes, fileStats().printTimeMinutes)
                 task.updateValue(currentStat)
@@ -97,9 +97,8 @@ class JobModel(printer: PrinterModel, settings: Settings) {
 
           } finally {
             LOG.info(s"Print job completed, send final GCode")
-            caffe.destroy()
             // send footer
-            Macro.prepare(settings.jobEnd(), settings).foreach(printer.sendLine(_, CommandSource.Job))
+            Macro.prepare(settings.jobEnd(), settings).foreach{ line => printer.print(GCode(line))}
             LOG.info(s"Print job finished")
           }
         }

@@ -21,7 +21,7 @@ import alexsmirnov.pbconsole.gcode.Request
 import alexsmirnov.pbconsole.gcode.Response
 import alexsmirnov.pbconsole.gcode.SmoothieResponse
 
-class NewPrinterTest extends FlatSpec with Eventually with TimeLimitedTests with Matchers {
+class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests with Matchers {
   import scala.concurrent.ExecutionContext.Implicits._
   type FixtureParam = (Semaphore, Printer)
   val timeLimit = 2.seconds

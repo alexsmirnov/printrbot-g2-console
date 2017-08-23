@@ -27,6 +27,7 @@ import scalafx.scene.layout.VBox
 import scalafx.scene.paint.Color
 import scalafx.scene.paint.Color.sfxColor2jfx
 import scalafx.scene.control.CheckBox
+import alexsmirnov.pbconsole.gcode.GCode
 
 object Console {
 
@@ -44,7 +45,7 @@ object Console {
  * @author asmirnov
  *
  */
-class Console(printer: PrinterModel,settings: Settings) { console =>
+class Console(printer: PrinterModel, settings: Settings) { console =>
 
   val buffer = ObservableBuffer.empty[Console.Msg]
   val disabled = BooleanProperty(false)
@@ -57,11 +58,11 @@ class Console(printer: PrinterModel,settings: Settings) { console =>
       hgrow = Priority.Always
       padding = Insets(2)
       children = List(
-          new CheckBox {
-            margin = Insets(5)
-            text = "Debud output"
-            selected <==> debug
-          },
+        new CheckBox {
+          margin = Insets(5)
+          text = "Debud output"
+          selected <==> debug
+        },
         new ListView[Console.Msg](buffer) {
           vgrow = Priority.Always
           hgrow = Priority.Always
@@ -111,11 +112,12 @@ class Console(printer: PrinterModel,settings: Settings) { console =>
             }
           }
           def send {
-            printer.sendLine(input.text(), CommandSource.Console)
-            history = input.text() :: history
-            currentHistory = 0
-            input.clear()
-            input.requestFocus()
+            if (printer.offer(GCode(input.text()), CommandSource.Console)) {
+              history = input.text() :: history
+              currentHistory = 0
+              input.clear()
+              input.requestFocus()
+            }
           }
           val input = new TextField {
             hgrow = Priority.Always
