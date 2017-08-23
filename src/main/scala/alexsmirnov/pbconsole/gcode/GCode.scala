@@ -124,35 +124,32 @@ object GCode {
     y: range,
     z: range,
     extrude: Float,
-    printTimeMinutes: Float)
+    printTimeMinutes: Float,
+    currentPosition: Position)
 
-  val EmptyStats = PrintStats(range(), range(), range(), 0f, 0f)
-  val ZeroStats = PrintStats(range(0, 0), range(0, 0), range(0, 0), 0f, 0L)
-  def estimatePrint(lines: Iterator[String]) = processProgram(lines) { (_, _, _) => () }
-
-  def processProgram(lines: Iterator[String])(callback: (GCode, Position, PrintStats) => Unit): PrintStats = {
-    lines.foldLeft((EmptyStats, UnknownPosition)) { (stp, line) =>
-      val (currentStats, currentPosition) = stp
+  val EmptyStats = PrintStats(range(), range(), range(), 0f, 0f,UnknownPosition)
+  val ZeroStats = PrintStats(range(0, 0), range(0, 0), range(0, 0), 0f, 0L,UnknownPosition)
+  def estimatePrint(lines: Iterator[String]) = processProgram(lines).foldLeft(ZeroStats){ (l,r) => r._2 }
+  def processProgram(lines: Iterator[String]): Iterator[(GCode,PrintStats)] = {
+    lines.scanLeft[(GCode,PrintStats)]((EmptyCommand,EmptyStats)) { (stp, line) =>
+      val (_,currentStats) = stp
       apply(line) match {
-        case EmptyCommand => stp
         case move: G92SetPos =>
-          val nextPosition = currentPosition.moveTo(move)
-          callback(move, nextPosition, currentStats)
-          (currentStats, nextPosition)
+          val nextPosition = currentStats.currentPosition.moveTo(move)
+          (move,  currentStats.copy(currentPosition=nextPosition))
         case move: Move =>
+          val PrintStats(rangeX, rangeY, rangeZ, ex, time,currentPosition) = currentStats
           val nextPosition = currentPosition.moveTo(move)
-          val PrintStats(rangeX, rangeY, rangeZ, ex, time) = currentStats
           val nextStats = PrintStats(rangeX.update(nextPosition.x),
             rangeY.update(nextPosition.y),
             rangeZ.update(nextPosition.z),
             ex + dist(currentPosition.extruder, nextPosition.extruder),
-            time + currentPosition.travelTime(nextPosition))
-          callback(move, nextPosition, nextStats)
-          (nextStats, nextPosition)
+            time + currentPosition.travelTime(nextPosition),
+            nextPosition)
+          (move, nextStats)
         case other =>
-          callback(other, currentPosition, currentStats)
-          stp
+          (other, currentStats)
       }
-    }._1
+    }.filter(_._1 != EmptyCommand)
   }
 }

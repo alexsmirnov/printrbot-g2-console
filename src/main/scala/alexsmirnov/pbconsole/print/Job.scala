@@ -91,8 +91,11 @@ class Job(job: JobModel, settings: Settings) {
       visible <== job.jobActive
     }
     grid.addRow(0, statLabel("Started:"))
-    grid.addRow(0, statLabel("Remaining time:"))
-    grid.addRow(0, statLabel("Current height:"))
+    grid.addRow(1, statLabel("Remaining time:"),
+        floatOut(job.fileStats.map { s => s.printTimeMinutes } - job.printStats.map {js => js.printTimeMinutes}))
+    grid.addRow(2, statLabel("Current height:"),
+        floatOut(job.printStats.map {js => js.currentPosition.z.getOrElse(0f)})
+        )
     grid
   }
 

@@ -115,7 +115,9 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests with Ma
     val received = print(fp,50)
     Thread.sleep(10)
     assert(fp._2.offerCommands(cmd("M2","M3","M4","M5"), CommandSource.Monitor),"cannot offer command")
+    assert(fp._2.offerCommands(cmd("M7","M8","M9","M1"), CommandSource.Monitor),"cannot offer command")
     eventually { received.map{_._1.rawLine}.indexOfSlice(List("ok Y:2","ok Y:3","ok Y:4","ok Y:5")) should ( be >(1) and be <(49-4) ) }
+    eventually { received.map{_._1.rawLine}.indexOfSlice(List("ok Y:7","ok Y:8","ok Y:9","ok Y:1")) should ( be >(1) and be <(49-4) ) }
   }
 
   it should "reject commands if printer disconnected" in { fp =>

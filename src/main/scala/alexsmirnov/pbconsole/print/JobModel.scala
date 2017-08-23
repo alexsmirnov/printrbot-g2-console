@@ -47,7 +47,10 @@ class JobModel(printer: PrinterModel, settings: Settings) {
     val callbacks = fileListeners.map(_.callback())
     gcodeFile().foreach { file =>
       val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
-      val stats = GCode.processProgram(src.getLines()) { (cmd, pos, _) => callbacks.foreach(_(cmd, pos)) }
+      val stats = GCode.processProgram(src.getLines()).foldLeft(ZeroStats) { case (_,(cmd,stat)) =>
+        callbacks.foreach(_(cmd, stat.currentPosition))
+        stat
+        }
       fileStats.update(stats)
     }
   }
@@ -56,7 +59,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
   }
 
  /**
- * Job cancel flag, to avoid thread interruption in streams
+ * Job cancel flag, to avoid thread interruption in stream
  */
   @volatile 
   private[this] var jobCancelled: Boolean = true
@@ -67,7 +70,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
       def isActive(): Boolean = !(jobCancelled || task.isCancelled())
       def call() = {
         // add 20 minutes for heatind and 10% for possible error
-        val caffe = Process(Seq("caffeinate", "-i", "-t", ((jobStats().printTimeMinutes + 20) * 66).toInt.toString())).!
+        val caffe = Process(Seq("caffeinate", "-i", "-t", ((jobStats().printTimeMinutes + 20) * 66).toInt.toString())).run()
         gcodeFile().foreach { file =>
           task.updateProgress(0.0, fileStats().printTimeMinutes)
           val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
@@ -75,7 +78,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
           val lines = Macro.prepare(settings.jobStart(), settings) ++ src.getLines()
           try {
             LOG.info(s"Print job started")
-            GCode.processProgram(lines) { (cmd, pos, currentStat) =>
+            GCode.processProgram(lines).foreach { case (cmd,currentStat) =>
               if (isActive()) {
                 cmd match {
                   case ExtTempAndWaitCommand(t) =>
@@ -99,6 +102,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
             LOG.info(s"Print job completed, send final GCode")
             // send footer
             Macro.prepare(settings.jobEnd(), settings).foreach{ line => printer.print(GCode(line))}
+            caffe.destroy()
             LOG.info(s"Print job finished")
           }
         }
@@ -109,6 +113,8 @@ class JobModel(printer: PrinterModel, settings: Settings) {
 
   jobActive <== (printService.state === JWorker.State.SCHEDULED) or (printService.state === JWorker.State.RUNNING)
 
+  val printStats = printService.value.map { ps => if(null == ps) ZeroStats else ps }
+  
   def start() {
     if (gcodeFile().isDefined && !jobActive()) {
       printService.reset()
