@@ -37,3 +37,4 @@ case class HaltedResponse(rawLine: String) extends CommandResponse {
 case class CommandResponseWithStatus(rawLine: String, values: List[ResponseValue], isError: Boolean = false) extends StatusResponse with CommandResponse
 case class StatusOnlyResponse(rawLine: String, values: List[ResponseValue]) extends StatusResponse
 case class UnknownResponse(rawLine: String) extends Response
+case class ErrorResponse(rawLine: String,msg: String) extends Response

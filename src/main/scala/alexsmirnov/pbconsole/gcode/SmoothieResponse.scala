@@ -48,7 +48,7 @@ object SmoothieResponse {
       val responses = values(msg)
         CommandResponseWithStatus(line, responses)
     case ERROR_RESPONSE(msg) =>
-      EmptyCommandResponse(line, true)
+      ErrorResponse(line, msg)
     case HALTED_RESPONSE() =>
       HaltedResponse(line)
     case other => 

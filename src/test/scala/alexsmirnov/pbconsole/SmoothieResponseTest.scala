@@ -11,6 +11,7 @@ import alexsmirnov.pbconsole.gcode.ExtruderOutput
 import alexsmirnov.pbconsole.gcode.BedTemp
 import alexsmirnov.pbconsole.gcode.BedTarget
 import alexsmirnov.pbconsole.gcode.BedOutput
+import alexsmirnov.pbconsole.gcode.ErrorResponse
 
 class SmoothieResponseTest extends FlatSpec with Matchers with Inspectors {
   "extruder temp response" should "generate status with temp" in {
@@ -24,5 +25,15 @@ class SmoothieResponseTest extends FlatSpec with Matchers with Inspectors {
     r shouldBe a[StatusResponse]
     val values = r.asInstanceOf[StatusResponse].values
     values should contain allOf(ExtruderTemp(180.0f),ExtruderTarget(210.0f),ExtruderOutput(128),BedTemp(50.0f),BedTarget(30.0f),BedOutput(0))
+  }
+  "error: response" should "generate error" in {
+    
+    val r = SmoothieResponse("error:Only G38.2 suppoerted")
+    r shouldBe a[ErrorResponse]
+  }
+  "error response" should "generate error" in {
+    
+    val r = SmoothieResponse("error Only G38.2 suppoerted")
+    r shouldBe a[ErrorResponse]
   }
 }
