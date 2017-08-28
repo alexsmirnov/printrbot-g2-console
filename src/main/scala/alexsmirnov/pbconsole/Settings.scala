@@ -18,6 +18,11 @@ class Settings {
   val jobStart = StringProperty("")
   val jobEnd = StringProperty("")
   val uploadFolder = StringProperty("")
+  val joggerInterval = DoubleProperty(10)
+  val jogXYstep = DoubleProperty(1)
+  val jogZstep = DoubleProperty(1)
+  val jogXYspeed = DoubleProperty(100)
+  val jogZspeed = DoubleProperty(100)
 }
 
 object Settings {
@@ -30,6 +35,11 @@ object Settings {
   val JS = "jobStart"
   val JE = "jobEnd"
   val UF = "upload"
+  val JOG_XY_STEP = "joggerXYstep"
+  val JOG_Z_STEP = "joggerZstep"
+  val JOG_XY_SPEED = "joggerXYspeed"
+  val JOG_Z_SPEED = "joggerZspeed"
+  val JOG_INTERVAL = "joggerInterval"
   def apply(path: String): Settings = {
     val s = restore(path)
     bind(s, path)
@@ -37,12 +47,20 @@ object Settings {
   }
   def restore(path: String): Settings = {
     val node = Preferences.userRoot().node(path)
+    def restoreDouble(prop: DoubleProperty,key: String, default: Double) {
+      prop.update(node.getDouble(key, default))
+    }
     val s = new Settings
     s.debugOutput.update(node.getBoolean(DO, false))
-    s.bedWidth.update(node.getDouble(BED_W, 100))
-    s.bedDepth.update(node.getDouble(BED_D, 203))
-    s.height.update(node.getDouble(H, 130))
-    s.zOffset.update(node.getDouble(Z_OFFSET, 0.0))
+    restoreDouble(s.bedWidth,BED_W, 100)
+    restoreDouble(s.bedDepth,BED_D, 203)
+    restoreDouble(s.height,H, 130)
+    restoreDouble(s.zOffset,Z_OFFSET, 0.0)
+    restoreDouble(s.joggerInterval,JOG_INTERVAL, 10.0)
+    restoreDouble(s.jogXYspeed,JOG_XY_SPEED, 1000.0)
+    restoreDouble(s.jogXYstep,JOG_XY_STEP, 10.0)
+    restoreDouble(s.jogZspeed,JOG_Z_SPEED, 500.0)
+    restoreDouble(s.jogZstep,JOG_Z_STEP, 10.0)
     val uploadFolder = node.get(UF,"")
     if(uploadFolder.isEmpty()) {
       val userHome = System.getProperty("user.dir")
@@ -80,6 +98,11 @@ object Settings {
     bindString(node, settings.jobStart, JS)
     bindString(node, settings.jobEnd, JE)
     bindString(node, settings.uploadFolder, UF)
+    bindDouble(node,settings.joggerInterval,JOG_INTERVAL)
+    bindDouble(node,settings.jogXYspeed,JOG_XY_SPEED)
+    bindDouble(node,settings.jogXYstep,JOG_XY_STEP)
+    bindDouble(node,settings.jogZspeed,JOG_Z_SPEED)
+    bindDouble(node,settings.jogZstep,JOG_Z_STEP)
     settings.macros.onChange {
       val mWithIndex = settings.macros.zipWithIndex
       node.putInt(NUM_MACROS, mWithIndex.size)

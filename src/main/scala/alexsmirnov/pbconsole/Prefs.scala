@@ -56,6 +56,11 @@ class Prefs(settings: Settings) {
       "Bed depth" -> doubleText(settings.bedDepth),
       "Height" -> doubleText(settings.height),
       "Printhead Z offset" -> doubleText(settings.zOffset),
+      "Jogger interval" -> doubleText(settings.joggerInterval),
+      "Jogger XY step" -> doubleText(settings.jogXYstep),
+      "Jogger XY speed" -> doubleText(settings.jogXYspeed),
+      "Jogger Z step" -> doubleText(settings.jogZstep),
+      "Jogger Z speed" -> doubleText(settings.jogZspeed),
       "Job start GCode" -> textEdit(settings.jobStart),
       "Job End GCode" -> textEdit(settings.jobEnd),
       "Upload folder" -> textField(settings.uploadFolder)
