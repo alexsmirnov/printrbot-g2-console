@@ -125,10 +125,10 @@ class Jogger(printer: PrinterModel, settings: Settings) {
       spacing = 5
       padding = Insets(5)
       alignment = Pos.Center
-      children = new Label("Z") +: allSteps.reverse.map {
-        case (step, index) =>
-          moveButton(step.toString(), moveZ(step))
-      }
+      children = new Label("Z") :: 
+                   joggerButton("Z", "Z", settings.jogZstep, settings.jogZspeed) :: 
+                   joggerButton("-Z", "Z", -settings.jogZstep, settings.jogZspeed) :: 
+                   Nil
     }
     bottom = new VBox {
       children = List(new HBox {
@@ -136,10 +136,10 @@ class Jogger(printer: PrinterModel, settings: Settings) {
         alignment = Pos.Center
         spacing = 5
         padding = Insets(5)
-        children = new Label("Extruder") +: allSteps.map {
-          case (step, index) =>
-            moveButton(step.toString(), moveE(step))
-        }
+      children = new Label("E") :: 
+                   joggerButton("E", "E", settings.jogEstep, settings.jogEspeed) :: 
+                   joggerButton("-E", "E", -settings.jogEstep, settings.jogEspeed) :: 
+                   Nil
       },
         macros)
     }

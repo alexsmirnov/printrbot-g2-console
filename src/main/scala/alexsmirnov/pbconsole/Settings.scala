@@ -20,9 +20,11 @@ class Settings {
   val uploadFolder = StringProperty("")
   val joggerInterval = DoubleProperty(10)
   val jogXYstep = DoubleProperty(1)
-  val jogZstep = DoubleProperty(1)
   val jogXYspeed = DoubleProperty(100)
   val jogZspeed = DoubleProperty(100)
+  val jogZstep = DoubleProperty(1)
+  val jogEstep = DoubleProperty(1)
+  val jogEspeed = DoubleProperty(100)
 }
 
 object Settings {
@@ -36,9 +38,11 @@ object Settings {
   val JE = "jobEnd"
   val UF = "upload"
   val JOG_XY_STEP = "joggerXYstep"
-  val JOG_Z_STEP = "joggerZstep"
   val JOG_XY_SPEED = "joggerXYspeed"
+  val JOG_Z_STEP = "joggerZstep"
   val JOG_Z_SPEED = "joggerZspeed"
+  val JOG_E_STEP = "joggerEstep"
+  val JOG_E_SPEED = "joggerEspeed"
   val JOG_INTERVAL = "joggerInterval"
   def apply(path: String): Settings = {
     val s = restore(path)
@@ -61,6 +65,8 @@ object Settings {
     restoreDouble(s.jogXYstep,JOG_XY_STEP, 10.0)
     restoreDouble(s.jogZspeed,JOG_Z_SPEED, 500.0)
     restoreDouble(s.jogZstep,JOG_Z_STEP, 10.0)
+    restoreDouble(s.jogEspeed,JOG_E_SPEED, 1000.0)
+    restoreDouble(s.jogEstep,JOG_E_STEP, 10.0)
     val uploadFolder = node.get(UF,"")
     if(uploadFolder.isEmpty()) {
       val userHome = System.getProperty("user.dir")
@@ -103,6 +109,8 @@ object Settings {
     bindDouble(node,settings.jogXYstep,JOG_XY_STEP)
     bindDouble(node,settings.jogZspeed,JOG_Z_SPEED)
     bindDouble(node,settings.jogZstep,JOG_Z_STEP)
+    bindDouble(node,settings.jogEspeed,JOG_E_SPEED)
+    bindDouble(node,settings.jogEstep,JOG_E_STEP)
     settings.macros.onChange {
       val mWithIndex = settings.macros.zipWithIndex
       node.putInt(NUM_MACROS, mWithIndex.size)

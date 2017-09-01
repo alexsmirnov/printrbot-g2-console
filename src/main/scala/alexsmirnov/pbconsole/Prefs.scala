@@ -61,6 +61,8 @@ class Prefs(settings: Settings) {
       "Jogger XY speed" -> doubleText(settings.jogXYspeed),
       "Jogger Z step" -> doubleText(settings.jogZstep),
       "Jogger Z speed" -> doubleText(settings.jogZspeed),
+      "Jogger Extruder step" -> doubleText(settings.jogEstep),
+      "Jogger Extruder speed" -> doubleText(settings.jogEspeed),
       "Job start GCode" -> textEdit(settings.jobStart),
       "Job End GCode" -> textEdit(settings.jobEnd),
       "Upload folder" -> textField(settings.uploadFolder)
