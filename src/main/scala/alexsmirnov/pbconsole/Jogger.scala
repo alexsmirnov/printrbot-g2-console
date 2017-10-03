@@ -50,9 +50,8 @@ class Jogger(printer: PrinterModel, settings: Settings) {
     if (pos.absolute) Iterator(GCode("M83"),cmd,GCode("M83")) else Iterator(cmd)
   },CommandSource.Monitor)
   
-  val steps = List[Double](0.1, 1, 10)
-  val ssize = steps.size
-  val allSteps = steps.reverse.map(- _).zipWithIndex ++: (steps.zipWithIndex.map { case (t, n) => t -> (n + steps.size + 1) })
+  val ssize = 2
+  
   var joggerScheduler: Option[ScheduledService[Unit]] = None
   def joggerButton(label: String, axis: String, step: NumberExpression,speed: NumberExpression): Node = new Button(label) {
     minWidth = 45
@@ -84,13 +83,11 @@ class Jogger(printer: PrinterModel, settings: Settings) {
     grid.add(joggerButton("+X", "X", settings.jogXYstep, settings.jogXYspeed),ssize+2,ssize+1)
     grid.add(joggerButton("+Y", "Y", settings.jogXYstep, settings.jogXYspeed),ssize+1,ssize)
     grid.add(joggerButton("-Y", "Y", -settings.jogXYstep, settings.jogXYspeed),ssize+1,ssize+2)
-    grid.add(new Label("X"), 0, steps.size + 1)
-    grid.add(new Label("Y"), steps.size + 1, 0)
-    grid.add(macroButton("H", "G28"), steps.size + 1, steps.size + 1)
+    grid.add(macroButton("H", "G28"), ssize + 1, ssize + 1)
     grid.add(macroButton("Home X", "G28 X0"), 1, 1, 2, 1)
-    grid.add(macroButton("Home Y", "G28 Y0"), 1, steps.size * 2 + 1, 2, 1)
-    grid.add(macroButton("Home XY", "G28 X0 Y0"), steps.size * 2, 1, 2, 1)
-    grid.add(macroButton("Motors Off", "M84"), steps.size * 2, steps.size * 2 + 1, 2, 1)
+    grid.add(macroButton("Home Y", "G28 Y0"), 1, ssize * 2 + 1, 2, 1)
+    grid.add(macroButton("Home XY", "G28 X0 Y0"), ssize * 2, 1, 2, 1)
+    grid.add(macroButton("Motors Off", "M84"), ssize * 2, ssize * 2 + 1, 2, 1)
     grid.alignment = Pos.Center
     // visual effects
     grid.hgap = 5.0
@@ -125,8 +122,7 @@ class Jogger(printer: PrinterModel, settings: Settings) {
       spacing = 5
       padding = Insets(5)
       alignment = Pos.Center
-      children = new Label("Z") :: 
-                   joggerButton("Z", "Z", settings.jogZstep, settings.jogZspeed) :: 
+      children =   joggerButton("Z", "Z", settings.jogZstep, settings.jogZspeed) :: 
                    joggerButton("-Z", "Z", -settings.jogZstep, settings.jogZspeed) :: 
                    Nil
     }
@@ -136,8 +132,7 @@ class Jogger(printer: PrinterModel, settings: Settings) {
         alignment = Pos.Center
         spacing = 5
         padding = Insets(5)
-      children = new Label("E") :: 
-                   joggerButton("E", "E", settings.jogEstep, settings.jogEspeed) :: 
+      children =   joggerButton("E", "E", settings.jogEstep, settings.jogEspeed) :: 
                    joggerButton("-E", "E", -settings.jogEstep, settings.jogEspeed) :: 
                    Nil
       },

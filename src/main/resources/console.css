@@ -1,1 +1,4 @@
-@CHARSET "UTF-8";
+#root {
+/*    -fx-background-color: #333333; */
+    -fx-padding: 1px;
+}

@@ -68,7 +68,7 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
           hgrow = Priority.Always
           editable = false
           selectionModel().selectionMode = SelectionMode.Single
-          cellFactory_= { v =>
+          cellFactory = { v =>
             new ListCell[Console.Msg] {
               val input = item map {
                 case null => false
@@ -112,11 +112,13 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
             }
           }
           def send {
-            if (printer.offer(GCode(input.text()), CommandSource.Console)) {
-              history = input.text() :: history
-              currentHistory = 0
-              input.clear()
-              input.requestFocus()
+            if (!input.text().trim().isEmpty()) {
+              if (printer.offer(GCode(input.text()), CommandSource.Console)) {
+                history = input.text() :: history
+                currentHistory = 0
+                input.clear()
+                input.requestFocus()
+              }
             }
           }
           val input = new TextField {

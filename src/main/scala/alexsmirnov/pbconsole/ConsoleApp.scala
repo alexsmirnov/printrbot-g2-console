@@ -57,6 +57,10 @@ import alexsmirnov.pbconsole.print.Job
 import alexsmirnov.pbconsole.print.JobModel
 import alexsmirnov.pbconsole.octoprint.ApiServer
 import alexsmirnov.pbconsole.serial.PrinterImpl
+import scalafx.scene.control.MenuBar
+import scalafx.scene.control.Menu
+import scalafx.scene.control.MenuItem
+import scalafx.scene.control.TabPane.TabClosingPolicy
 
 /**
  * TODO: reconnect button, status from {sr:...}, movement control
@@ -65,18 +69,15 @@ import alexsmirnov.pbconsole.serial.PrinterImpl
  */
 object ConsoleApp extends JFXApp {
 
-  
   val settings = Settings("/alexsmirnov/pbconsole")
 
   val printer = PrinterImpl(parameters.named)
 
-  
   val printerModel = new PrinterModel(printer)
-  
-  val console = new Console(printerModel,settings)
-  val printerControl = new PrinterControl(printerModel,settings)
-  val jobModel = new JobModel(printerModel,settings)
-  val job = new Job(jobModel,settings)
+
+  val jobModel = new JobModel(printerModel, settings)
+  val console = new Console(printerModel, settings)
+  val printerControl = new PrinterControl(printerModel, jobModel, settings)
   val preferences = new Prefs(settings)
 
   stage = new PrimaryStage {
@@ -96,49 +97,41 @@ object ConsoleApp extends JFXApp {
   }
 
   def toolbar: Node = {
-    new VBox {
-      vgrow = Priority.Always
-      hgrow = Priority.Always
-      children = new ToolBar {
-        content = List(
-          new Button {
-            text = "Button 1"
-          }, new Button {
-            text = "Button 2"
-          }, new Slider {
-
-          })
-      }
+    new MenuBar {
+      maxWidth = 400
+      useSystemMenuBar = true
+      menus = List(
+        new Menu("File") {
+          items = List(
+            new MenuItem("Open"),
+            new MenuItem("Open recent"))
+        })
     }
   }
 
   def tabs: Node = {
-    new Accordion {
+    new TabPane {
       vgrow = Priority.Always
       hgrow = Priority.Always
-      panes = Seq(
-        new TitledPane {
-          text = "Preferences"
-          content = preferences.node
-        },
-        new TitledPane {
+      tabClosingPolicy = TabClosingPolicy.Unavailable
+      tabs = Seq(
+        new Tab {
           text = "Printer control"
           content = printerControl.node
         },
-        new TitledPane {
-          text = "Print"
-//          closable = false
-          content = job.node
-        },
-          new TitledPane {
+        new Tab {
           hgrow = Priority.Always
           text = "Console"
-//          closable = false
+          //          closable = false
           content = console.node
+        },
+        new Tab {
+          text = "Preferences"
+          content = preferences.node
         })
     }
   }
-  
+
   def status: Node = {
     new HBox {
       hgrow = Priority.Always
@@ -149,16 +142,12 @@ object ConsoleApp extends JFXApp {
   }
 
   val apiServer = new ApiServer(printerModel, jobModel, settings)
+  
   override def stopApp() {
     jobModel.printService.reset()
     apiServer.stop()
     printer.stop()
   }
 
-  val counter = new AtomicInteger()
-  val scheduler = ScheduledService(Task { "{r:${counter.incrementAndGet} }" })
-  scheduler.period = Duration(10000.0)
-//  scheduler.onSucceeded = { ev: WorkerStateEvent => console.addInput(scheduler.lastValue()) }
-  //  scheduler.start()
   delayedInit { printer.start() }
 }
