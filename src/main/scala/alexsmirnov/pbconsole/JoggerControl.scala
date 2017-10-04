@@ -17,6 +17,7 @@ import scalafx.scene.SubScene
 import alexsmirnov.scalafx.Xform
 import scalafx.scene.shape.Box
 import scalafx.scene.paint.Material
+import scalafx.beans.property.DoubleProperty
 
 class JoggerControl {
   val h = 150f
@@ -51,44 +52,78 @@ class JoggerControl {
       material = stuff
     }
   }
+  val arrowBodyScale = 0.7f
   def arrow(w: Float,l: Float,h: Float, material: Material) = mesh(
       points(
-          (l,h,0),
+          // top triangle
+          (l,h,0),                    // 0
           (0,h,-w/2),
           (0,h,w/2),
-          
-          (l,0,0),
+          // bottom triangle
+          (l,0,0),                    // 3
           (0,0,-w/2),
-          (0,0,w/2)
+          (0,0,w/2),
+          // top body
+          (0,h,-w/2*arrowBodyScale), //6
+          (0,h,w/2*arrowBodyScale),
+          (-l,h,-w/2*arrowBodyScale), //8
+          (-l,h,w/2*arrowBodyScale),
+          // top body
+          (0,0,-w/2*arrowBodyScale), //10
+          (0,0,w/2*arrowBodyScale),
+          (-l,0,-w/2*arrowBodyScale), //12
+          (-l,0,w/2*arrowBodyScale)
           ),
       faces(
           // top
           (0,2,1),
-          // back
-          (2,5,1),
-          (5,4,1),
+          // tip back
+          (2,7,5),
+          (7,11,5),
+          (6,1,4),
+          (6,4,10),
           // left
           (2,3,5),
           (0,3,2),
           // right
-          (0,1,4),
-          (0,4,3),
+          (0,4,1),
+          (0,3,4),
           // bottom
-          (3,4,5)
+          (3,4,5),
+          // body
+          // top
+          (6,7,8),
+          (7,9,8),
+          // bottom
+          (10,11,12),
+          (13,12,11),
+          // left
+          (6,12,8),
+          (6,10,12),
+          // Right
+          (7,11,9),
+          (11,13,9),
+          // back
+          (8,12,9),
+          (12,13,9)
           ),
       material)
+  val rx = DoubleProperty(-15)
+  val ry = DoubleProperty(30)
+  val rz = DoubleProperty(0)
   val node: Node = {
     val camera = new PerspectiveCamera(true)
     camera.translateZ = -800
     camera.nearClip = 0.1
     camera.farClip = 10000
     val cameraForm = new Xform(camera)
-    cameraForm.rx.angle = -15
-    cameraForm.ry.angle = 30
+    cameraForm.rx.angle <== rx
+    cameraForm.ry.angle <== ry
+    cameraForm.rz.angle <== rz
     val root = new Group(cameraForm, axis,
-      arrow(200,200,10,
+      arrow(100,100,20,
         blueMaterial))
-    val sscene = new SubScene(root, 400, 400)
+    val sscene = new SubScene(root, 600, 600)
     sscene.camera = camera
     sscene
   }

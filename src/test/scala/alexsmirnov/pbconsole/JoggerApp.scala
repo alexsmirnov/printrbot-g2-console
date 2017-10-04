@@ -7,6 +7,8 @@ import scalafx.scene.Scene
 import scalafx.scene.layout.BorderPane
 import scalafx.scene.paint.Color
 import scalafx.stage.StageStyle
+import scalafx.scene.layout.VBox
+import scalafx.scene.control.Slider
 
 object JoggerApp extends JFXApp {
 
@@ -22,6 +24,25 @@ object JoggerApp extends JFXApp {
       stylesheets += this.getClass.getResource("/console.css").toExternalForm
       root = new BorderPane {
         center = jogger.node
+        left = new VBox {
+          children = List(
+              new Slider {
+                min = -180
+                max = 180
+                value <==> jogger.rx
+              },
+              new Slider {
+                min = -180
+                max = 180
+                value <==> jogger.ry
+              },
+              new Slider {
+                min = -180
+                max = 180
+                value <==> jogger.rz
+              }
+              )
+        }
       }
     }
   }
