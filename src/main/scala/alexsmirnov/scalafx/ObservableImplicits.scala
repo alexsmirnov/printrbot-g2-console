@@ -90,3 +90,4 @@ trait ObservableImplicits extends LowPriorityObservableImplicits {
     }
   }
 }
+object ObservableImplicits extends ObservableImplicits

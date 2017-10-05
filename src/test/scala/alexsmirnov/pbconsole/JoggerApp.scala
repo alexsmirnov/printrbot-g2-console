@@ -29,17 +29,14 @@ object JoggerApp extends JFXApp {
               new Slider {
                 min = -180
                 max = 180
-                value <==> jogger.rx
               },
               new Slider {
                 min = -180
                 max = 180
-                value <==> jogger.ry
               },
               new Slider {
                 min = -180
                 max = 180
-                value <==> jogger.rz
               }
               )
         }
