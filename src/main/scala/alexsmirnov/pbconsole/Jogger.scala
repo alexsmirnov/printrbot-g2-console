@@ -55,16 +55,10 @@ class Jogger(printer: PrinterModel, settings: Settings) {
   def joggerButtonArmed(dir: JoggerControl.Dir, armed: Boolean) {
     joggerScheduler.foreach(_.cancel)
     if (armed) {
-      val jogEstep = settings.jogEstep.toDouble
-      val jogEspeed = settings.jogEspeed.toDouble
-      val jogXYstep = settings.jogXYstep.toDouble
-      val jogXYspeed = settings.jogXYspeed.toDouble
-      val jogZstep = settings.jogZstep.toDouble
-      val jogZspeed = settings.jogZspeed.toDouble
       def task = dir match {
-        case JoggerControl.EMinus | JoggerControl.EPlus => Task[Boolean](moveExtruder(dir.axis, jogEstep * dir.sign, jogEspeed))
-        case JoggerControl.ZMinus | JoggerControl.ZPlus => Task[Boolean](move(dir.axis, jogZstep * dir.sign, jogZspeed))
-        case _ => Task[Boolean](move(dir.axis, jogXYstep * dir.sign, jogXYspeed))
+        case JoggerControl.EMinus | JoggerControl.EPlus => Task[Boolean](moveExtruder(dir.axis, settings.jogEstep.toDouble * dir.sign, settings.jogEspeed.toDouble))
+        case JoggerControl.ZMinus | JoggerControl.ZPlus => Task[Boolean](move(dir.axis, settings.jogZstep.toDouble * dir.sign, settings.jogZspeed.toDouble))
+        case _ => Task[Boolean](move(dir.axis, settings.jogXYstep.toDouble * dir.sign, settings.jogXYspeed.toDouble))
       }
       val ss = ScheduledService[Boolean](task)
       ss.period = Duration(settings.joggerInterval())
