@@ -23,7 +23,7 @@ object JoggerApp extends JFXApp {
 //      fill = Color.rgb(38, 38, 38)
       stylesheets += this.getClass.getResource("/console.css").toExternalForm
       root = new BorderPane {
-        center = jogger.node
+        center = jogger
         left = new VBox {
           children = List(
               new Slider {

@@ -90,6 +90,9 @@ class ArrowButton(label: String, dim: ArrowButton.Dimensions, dir: ArrowButton.D
   import ObservableImplicits._
   val dimensions = ObjectProperty(dim)
   shape <== dimensions.map(dir.shape(_).delegate)
+  clip <== dimensions.map(dir.shape(_).delegate)
+  minWidth <== dimensions.map(dir.width)
+  minHeight <== dimensions.map(dir.height)
   prefWidth <== dimensions.map(dir.width)
   prefHeight <== dimensions.map(dir.height)
 }
