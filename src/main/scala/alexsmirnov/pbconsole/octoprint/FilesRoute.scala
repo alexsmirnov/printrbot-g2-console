@@ -1,30 +1,25 @@
 package alexsmirnov.pbconsole.octoprint
 
-import akka.http.scaladsl.model._
-import akka.http.scaladsl.model.headers._
-import akka.http.scaladsl.server.Directives
 import spray.json.DefaultJsonProtocol._
 import alexsmirnov.pbconsole.Settings
 import alexsmirnov.pbconsole.PrinterModel
 import alexsmirnov.pbconsole.print.JobModel
-import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json._
 import java.nio.file.Paths
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.io.File
-import akka.http.scaladsl.server.{ Directive1, MissingFormFieldRejection }
-import akka.http.scaladsl.model.{ ContentType, Multipart }
-import akka.util.ByteString
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.{ Failure, Success }
-import akka.stream.scaladsl._
-import akka.http.scaladsl.server.directives.FileInfo
 import scalafx.application.Platform
+import org.scalatra.ScalatraServlet
+import org.scalatra.servlet.FileUploadSupport
+import org.scalatra.servlet.MultipartConfig
+import java.util.logging.Logger
 
-object FilesRoute extends Directives with SprayJsonSupport with DefaultJsonProtocol {
+object FilesRoute extends DefaultJsonProtocol {
   case class Ref(resource: String)
   implicit val refFormat = jsonFormat1(Ref)
   case class FileEntity(
@@ -47,40 +42,12 @@ object FilesRoute extends Directives with SprayJsonSupport with DefaultJsonProto
     done: Boolean = true)
   implicit val uploadResponseFormat = jsonFormat2(UploadResponse)
 
-  sealed trait FormPart
-  case class ParamPart(name: String, value: String) extends FormPart
-  case class FilePart(metadata: FileInfo, file: File) extends FormPart
-  case class ReqData(params: Map[String, String], file: Option[FilePart])
-
-  val fileUploadForm: Directive1[ReqData] = {
-    entity(as[Multipart.FormData]).flatMap { formData ⇒
-      extractRequestContext.flatMap { ctx ⇒
-        implicit val mat = ctx.materializer
-        implicit val ec = ctx.executionContext
-        val parts = formData.parts.map { part =>
-          if (part.filename.isDefined) {
-            val destination = File.createTempFile("akka-http-upload", ".tmp")
-            val fileInfo = FileInfo(part.name, part.filename.get, part.entity.contentType)
-            part.entity.dataBytes.runWith(FileIO.toPath(destination.toPath())).map(_ => FilePart(fileInfo, destination))
-          } else {
-            part.entity.toStrict(20.seconds).map(e => ParamPart(part.name, e.data.utf8String))
-          }
-        }
-        val fold = parts.runFoldAsync(ReqData(Map.empty, None)) {
-          case (acc, el) =>
-            el map {
-              case f: FilePart => acc.copy(file = Some(f))
-              case ParamPart(k, v) => acc.copy(params = acc.params + (k -> v))
-            }
-        }
-        onSuccess(fold)
-      }
-    }
-  }
 }
-trait FilesRoute {
+class FilesRoute(job: JobModel, settings: Settings) extends ScalatraServlet with FileUploadSupport with SprayJsonSupport {
+  configureMultipartHandling(MultipartConfig(maxFileSize = Some(3*1024*1024)))
+
   import FilesRoute._
-  def filesRoute(job: JobModel, settings: Settings) = {
+  val LOG = Logger.getLogger(this.getClass.getCanonicalName)
     def filesResponse() = {
       // all files
       val uploadFolder = new File(settings.uploadFolder())
@@ -90,29 +57,17 @@ trait FilesRoute {
         fileEntity(name)
       }.toList)
     }
-    pathPrefix("files") {
-      extractLog { log =>
-        pathEnd {
-          get {
-            // all files
-            complete(filesResponse())
-          }
-        } ~
-          path("local") {
-            get {
-              // all files
-              complete(filesResponse())
-            } ~
-              post {
-                fileUploadForm {
-                  case ReqData(fields, Some(FilePart(metadata, file))) =>
+    get(""){ filesResponse().toJson }
+    get("/"){ filesResponse().toJson }
+    get("/local"){ filesResponse().toJson }
+    post("/local") {
                     //                  formFields('select.as[Boolean] ? false, 'print.as[Boolean] ? false) {
                     //                    case (select, print) =>
                     val select = fields.getOrElse("select", "false").toBoolean
                     val print = fields.getOrElse("print", "false").toBoolean
                     val fileName = metadata.fileName
                     val loc = location(fileName)
-                    log.info(s"Upload request to files/local service, params $fields , file ${file.getAbsolutePath}, ${metadata}")
+                    LOG.info(s"Upload request to files/local service, params $fields , file ${file.getAbsolutePath}, ${metadata}")
                     // move to upload folder, select and print if requested
                     val uploadFolder = new File(settings.uploadFolder())
                     if (!uploadFolder.exists()) {
@@ -126,12 +81,6 @@ trait FilesRoute {
                       List(Location(Uri(loc))),
                       UploadResponse(UploadedFiles(fileEntity(fileName)))))
                   // No upload file, ignoring
-                  case ReqData(fields, None) =>
-                    complete("")
-                }
-              }
-          }
-      }
-    }
+                      ""
   }
 }
