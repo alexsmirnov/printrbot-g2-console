@@ -80,7 +80,8 @@ class PrinterImpl(port: Port, responseParser: String => Response, queueSize: Int
     def clearStack() { this.synchronized(commandsStack = Queue.empty) }
     def onStart() {
       positioning = Printer.Positioning(true, true)
-      clearStack(); request(queueSize)
+      clearStack()
+      request(queueSize)
     }
     def onStop() { cancel(); clearStack() }
 
