@@ -88,22 +88,8 @@ class Prefs(settings: Settings) {
   val macros = new Accordion {
     vgrow = Priority.Always
     hgrow = Priority.Always
-//    panes = macroPanes
   }
   settings.macros.bindMap(macros.panes)(macroPane)
-  /*
-  settings.macros.onChange((_, changes) => {
-    for (change <- changes)
-      change match {
-        case ObservableBuffer.Add(pos, added) =>
-          val addedPanes = added.toSeq.map { m => macroPane(m).delegate }
-          macros.panes.addAll(pos, addedPanes.asJavaCollection)
-        case ObservableBuffer.Remove(pos, removed) => macros.panes.remove(pos, pos + removed.size)
-        case ObservableBuffer.Reorder(from, to, permutation) => macros.panes = macroPanes
-        case ObservableBuffer.Update(pos, updated) => // already bound to controls
-      }
-  })
-  */
   val node: Node = new HBox {
     children = List(props, new VBox {
       children = List(
