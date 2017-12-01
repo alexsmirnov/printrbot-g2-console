@@ -15,8 +15,8 @@ libraryDependencies += "com.neuronrobotics" % "nrjavaserial" % "3.12.1"
 libraryDependencies += "org.reactivestreams" % "reactive-streams" % "1.0.0.final"
 libraryDependencies += "org.typelevel" %% "cats-core" % "1.0.0-MF"
 libraryDependencies ++= Seq(
-  "io.monix" %% "monix" % "2.3.0",
-  "io.monix" %% "monix-cats" % "2.3.0"
+  "io.monix" %% "monix" % "2.3.2",
+  "io.monix" %% "monix-cats" % "2.3.2"
 )
 libraryDependencies ++= Seq(
   "org.scalatra" %% "scalatra" % ScalatraVersion,

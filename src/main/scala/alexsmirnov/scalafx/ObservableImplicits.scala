@@ -1,5 +1,6 @@
 package alexsmirnov.scalafx
 
+import scala.language.implicitConversions
 import scala.collection.JavaConverters._
 import javafx.beans.binding.DoubleBinding
 import javafx.beans.binding.FloatBinding
@@ -15,6 +16,7 @@ import scalafx.beans.property.Property
 import scalafx.beans.value.ObservableValue
 import scalafx.collections.ObservableBuffer
 import javafx.collections.ObservableList
+import java.util.function.Predicate
 
 sealed trait BindingBuilder[A, B] {
   def createBinding(f: () => A, deps: Observable*): B
@@ -66,6 +68,10 @@ trait ObservableImplicits extends LowPriorityObservableImplicits {
     } else {
       Platform.runLater(f)
     }
+  }
+  
+  implicit def predicate[A](f: A => Boolean): Predicate[A] = new Predicate[A]{
+    def test(a: A) = f(a)
   }
 
   implicit class ObservableBufferOps[A](val buff: ObservableBuffer[A]) {
