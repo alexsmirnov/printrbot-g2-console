@@ -62,15 +62,15 @@ import java.util.concurrent.TimeUnit
 
     protected def onStop(): Unit
 
-    private def requestProducer(n: Long) = doSync {
+    protected  def requestProducer(n: Long) = doSync {
       if (!started) {
         requested = n
         started = true
         onStart()
       } else {
         requested += n
-        hasRequested.signalAll()
       }
+      hasRequested.signalAll()
     }
 
     protected def stopProducer() = doSync {

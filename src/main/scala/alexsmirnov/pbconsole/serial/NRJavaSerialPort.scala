@@ -87,7 +87,6 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port with Publis
           if (Thread.currentThread() != t) t.interrupt()
           // stop all streams
           sendComplete()
-          stopProducer()
           cancel()
           listeners.foreach { _(Disconnected) }
           p.disconnect()
