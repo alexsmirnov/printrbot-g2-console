@@ -64,20 +64,16 @@ class Job(job: JobModel, settings: Settings) {
   }
 
   val canvas = new Canvas() {
-    scaleX = 2.0
-    scaleY = 2.0
-    width <== settings.bedWidth
-    height <== settings.bedDepth
+    width <== settings.bedWidth * 2.0
+    height <== settings.bedDepth * 2.0
   }
 
   val bedImage = new StackPane {
     padding = Insets(10)
     children = List(
       new Rectangle {
-        scaleX = 2.0
-        scaleY = 2.0
-        width <== settings.bedWidth
-        height <== settings.bedDepth
+        width <== settings.bedWidth * 2.0
+        height <== settings.bedDepth *2.0
         fill = Color.Aqua
       },
       canvas)
@@ -175,11 +171,11 @@ class Job(job: JobModel, settings: Settings) {
         cmd match {
           case g1Move: GCode.G1Move if g1Move.extruder.isDefined =>
             lastXy.zip(xy).foreach {
-              case ((x0, y0), (x, y)) => gc.strokeLine(x0, y0, x, y)
+              case ((x0, y0), (x, y)) => gc.strokeLine(x0*2, y0*2, x*2, y*2)
             }
           case move: GCode.Move =>
             xy.foreach {
-              case (x, y) => gc.moveTo(x, y)
+              case (x, y) => gc.moveTo(x*2, y*2)
             }
           case cmd =>
         }
