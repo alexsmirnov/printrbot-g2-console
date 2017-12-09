@@ -79,21 +79,25 @@ object ConsoleApp extends JFXApp {
   val console = new Console(printerModel, settings)
   val printerControl = new PrinterControl(printerModel, jobModel, settings)
   val preferences = new Prefs(settings)
+  
+  val css = this.getClass.getResource("/console.css")
 
-  stage = new PrimaryStage {
-    width = 1000
-    height = 700
-    initStyle(StageStyle.Unified)
-    title = "Printrbot G2 console"
-    scene = new Scene {
+  val _scene = new Scene {
       fill = Color.rgb(38, 38, 38)
-      stylesheets += this.getClass.getResource("/console.css").toExternalForm
+      stylesheets += css.toExternalForm
       root = new BorderPane {
         top = toolbar
         center = tabs
         bottom = status
       }
     }
+  
+  stage = new PrimaryStage {
+    width = 1000
+    height = 700
+    initStyle(StageStyle.Unified)
+    title = "Printrbot G2 console"
+    scene = _scene
   }
 
   def toolbar: Node = {
@@ -142,6 +146,7 @@ object ConsoleApp extends JFXApp {
   }
 
   val apiServer = new ApiServer(printerModel, jobModel, settings)
+  FileWatcher(css,{ () => _scene.stylesheets = List(css.toExternalForm())})
   
   override def stopApp() {
     jobModel.printService.reset()

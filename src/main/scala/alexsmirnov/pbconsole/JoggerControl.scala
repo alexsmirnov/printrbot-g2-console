@@ -35,7 +35,7 @@ object JoggerControl {
   val h = 150f
   val s = 300f
   val arrowDim = ArrowButton.Dimensions(50, 40, 30, 60)
-  val ArrowBtn = List("arrow", "button")
+  val ArrowBtn = List("arrow")
   val xAxis = "xAxis" :: ArrowBtn
   val yAxis = "yAxis" :: ArrowBtn
   val zAxis = "zAxis" :: ArrowBtn
@@ -71,18 +71,18 @@ class JoggerControl extends HBox { root =>
     new VBox(50) {
       alignment = Pos.CenterRight
       children = List(
-        new ArrowButton("+Y", arrowDim, ArrowButton.Left) { rotate = 30; styleClass = yAxis; armed.onChange(axisArmedChanged(YPlus, armed())) },
-        new ArrowButton("-X", arrowDim, ArrowButton.Left) { rotate = -30; styleClass = xAxis; armed.onChange(axisArmedChanged(XMinus, armed())) })
+        new ArrowButton("+Y", arrowDim, ArrowButton.Left) { rotate = 30; styleClass ++= yAxis; armed.onChange(axisArmedChanged(YPlus, armed())) },
+        new ArrowButton("-X", arrowDim, ArrowButton.Left) { rotate = -30; styleClass ++= xAxis; armed.onChange(axisArmedChanged(XMinus, armed())) })
     },
     new VBox(17) {
       alignment = Pos.Center
-      children = List(new ArrowButton("+Z", arrowDim, ArrowButton.Up) { styleClass = zAxis; armed.onChange(axisArmedChanged(ZPlus, armed())) },
+      children = List(new ArrowButton("+Z", arrowDim, ArrowButton.Up) { styleClass ++= zAxis; armed.onChange(axisArmedChanged(ZPlus, armed())) },
         home,
-        new ArrowButton("-Z", arrowDim, ArrowButton.Down) { styleClass = zAxis; armed.onChange(axisArmedChanged(ZMinus, armed())) })
+        new ArrowButton("-Z", arrowDim, ArrowButton.Down) { styleClass ++= zAxis; armed.onChange(axisArmedChanged(ZMinus, armed())) })
     },
     new VBox(50) {
       alignment = Pos.CenterLeft
-      children = List(new ArrowButton("+X", arrowDim, ArrowButton.Right) { rotate = -30; styleClass = xAxis; armed.onChange(axisArmedChanged(XPlus, armed())) },
-        new ArrowButton("-Y", arrowDim, ArrowButton.Right) { rotate = 30; styleClass = yAxis; armed.onChange(axisArmedChanged(YMinus, armed())) })
+      children = List(new ArrowButton("+X", arrowDim, ArrowButton.Right) { rotate = -30; styleClass ++= xAxis; armed.onChange(axisArmedChanged(XPlus, armed())) },
+        new ArrowButton("-Y", arrowDim, ArrowButton.Right) { rotate = 30; styleClass ++= yAxis; armed.onChange(axisArmedChanged(YMinus, armed())) })
     })
 }

@@ -23,6 +23,7 @@ import alexsmirnov.pbconsole.gcode.GCode
 import scalafx.beans.property.ObjectProperty
 import java.util.function.Predicate
 import scalafx.collections.transformation.FilteredBuffer
+import javafx.collections.FXCollections
 
 object Console {
 
@@ -43,10 +44,7 @@ object Console {
  */
 class Console(printer: PrinterModel, settings: Settings) { console =>
 
-  val buffer = ObservableBuffer.empty[Console.Msg]
-  buffer.onInvalidate { op =>
-    if (buffer.size > 10000) buffer.remove(0)
-  }
+  val buffer = new ObservableBuffer[Console.Msg](FXCollections.synchronizedObservableList(FXCollections.observableArrayList()))
   val disabled = BooleanProperty(false)
   val debug = settings.debugOutput
   val outputPredicate = debug map { dbg: Boolean =>
@@ -152,11 +150,14 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
   }
 
   def isConsoleSource(src: CommandSource) = debug.value || src == CommandSource.Console || src == CommandSource.Unknown
+  // TODO - configure console buffer
   def addInput(src: CommandSource, line: String) {
+    if (buffer.size > 10000) buffer.remove(0)
     buffer += Console.In(line, src)
   }
 
   def addOutput(src: CommandSource, line: String) {
+    if (buffer.size > 10000) buffer.remove(0)
     buffer += Console.Out(line, src)
   }
 
