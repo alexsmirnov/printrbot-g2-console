@@ -103,12 +103,12 @@ class Jogger(printer: PrinterModel, settings: Settings) {
       children = List(
         new ArrowButton("-E", JoggerControl.arrowDim, ArrowButton.Up) {
           disable <== printer.connected.not()
-          styleClass = JoggerControl.ArrowBtn
+          styleClass ++= JoggerControl.ArrowBtn
           armed.onChange(joggerButtonArmed(JoggerControl.EMinus, armed()))
         },
         new ArrowButton("+E", JoggerControl.arrowDim, ArrowButton.Down) {
           disable <== printer.connected.not()
-          styleClass = JoggerControl.ArrowBtn
+          styleClass ++= JoggerControl.ArrowBtn
           armed.onChange(joggerButtonArmed(JoggerControl.EPlus, armed()))
         })
     }
