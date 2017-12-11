@@ -26,76 +26,88 @@ class Prefs(settings: Settings) {
 
   def controlGrid(rows: (String, Node)*): Node = {
     val grid = new GridPane {
+      styleClass += "prefs"
       padding = Insets(18)
       gridLinesVisible = true
     }
     rows.zipWithIndex.foreach {
       case ((label, control), r) =>
-        grid.addRow(r, new Label(label), control)
+        val lbl = new Label(label)
+        lbl.styleClass += "prefs_label"
+        lbl.labelFor = control
+        grid.addRow(r, lbl, control)
     }
     grid
   }
-  
+
   def doubleText(prop: DoubleProperty) = {
     val formatter = new TextFormatter(new NumberStringConverter())
     formatter.value <==> prop
     val text = new TextField {
-          textFormatter = formatter
-        }
+      styleClass += "prefs_input"
+      textFormatter = formatter
+    }
     text
   }
   def textField(value: StringProperty) = new TextField {
-          text <==> value
-        }
+    styleClass += "prefs_input"
+    text <==> value
+  }
   def textEdit(value: StringProperty) = new TextArea {
-          text <==> value
-        }
+    styleClass += "prefs_input"
+    text <==> value
+  }
 
   val props = controlGrid(
-      "Bed width" -> doubleText(settings.bedWidth),
-      "Bed depth" -> doubleText(settings.bedDepth),
-      "Height" -> doubleText(settings.height),
-      "Printhead Z offset" -> doubleText(settings.zOffset),
-      "Jogger interval" -> doubleText(settings.joggerInterval),
-      "Jogger XY step" -> doubleText(settings.jogXYstep),
-      "Jogger XY speed" -> doubleText(settings.jogXYspeed),
-      "Jogger Z step" -> doubleText(settings.jogZstep),
-      "Jogger Z speed" -> doubleText(settings.jogZspeed),
-      "Jogger Extruder step" -> doubleText(settings.jogEstep),
-      "Jogger Extruder speed" -> doubleText(settings.jogEspeed),
-      "Job start GCode" -> textEdit(settings.jobStart),
-      "Job End GCode" -> textEdit(settings.jobEnd),
-      "Upload folder" -> textField(settings.uploadFolder)
-      )
-  
-      def macroPane(m: Macro) = {
+    "Bed width" -> doubleText(settings.bedWidth),
+    "Bed depth" -> doubleText(settings.bedDepth),
+    "Height" -> doubleText(settings.height),
+    "Printhead Z offset" -> doubleText(settings.zOffset),
+    "Jogger interval" -> doubleText(settings.joggerInterval),
+    "Jogger XY step" -> doubleText(settings.jogXYstep),
+    "Jogger XY speed" -> doubleText(settings.jogXYspeed),
+    "Jogger Z step" -> doubleText(settings.jogZstep),
+    "Jogger Z speed" -> doubleText(settings.jogZspeed),
+    "Jogger Extruder step" -> doubleText(settings.jogEstep),
+    "Jogger Extruder speed" -> doubleText(settings.jogEspeed),
+    "Job start GCode" -> textEdit(settings.jobStart),
+    "Job End GCode" -> textEdit(settings.jobEnd),
+    "Upload folder" -> textField(settings.uploadFolder))
+    
+  props.id = "prefs_props"
+  def macroPane(m: Macro) = {
     new TitledPane {
+      styleClass += "prefs_macro"
       text <== m.nameProperty
       graphic = new Button {
+        styleClass += "prefs_remove_macro"
         text = "Remove"
-        onAction ={ ae: ActionEvent => settings.macros.remove(m) } 
+        onAction = { ae: ActionEvent => settings.macros.remove(m) }
       }
       content = controlGrid(
         "Name" -> textField(m.nameProperty),
         "Description" -> textField(m.descriptionProperty),
-        "GCode" -> textEdit(m.contentProperty)
-        )
+        "GCode" -> textEdit(m.contentProperty))
+      content().styleClass += "macro_props"
     }
   }
 
   def macroPanes = settings.macros.map(macroPane)
 
   val macros = new Accordion {
+    id = "prefs_macros"
     vgrow = Priority.Always
     hgrow = Priority.Always
   }
   settings.macros.bindMap(macros.panes)(macroPane)
   val node: Node = new HBox {
+    id = "prefs"
     children = List(props, new VBox {
       children = List(
         new Button {
+          id = "add_macro"
           text = "Add Macro"
-          onAction ={ ae: ActionEvent => val m = new Macro;m.name = "New Macro";settings.macros.add(m) }
+          onAction = { ae: ActionEvent => val m = new Macro; m.name = "New Macro"; settings.macros.add(m) }
         }, macros)
     })
   }

@@ -59,11 +59,13 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
 
   val node: Node = {
     new VBox {
+      id = "console"
       vgrow = Priority.Always
       hgrow = Priority.Always
       padding = Insets(2)
       children = List(
         new HBox {
+          id = "console_control"
           children = List(
             new CheckBox {
               margin = Insets(5)
@@ -75,6 +77,7 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
             })
         },
         new ListView[Console.Msg](visibleBuffer) {
+          id = "console_output"
           vgrow = Priority.Always
           hgrow = Priority.Always
           editable = false
@@ -82,6 +85,7 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
           visibleBuffer.onChange{ if(visibleBuffer.size >0) scrollTo(visibleBuffer.size-1) }
           cellFactory = { v =>
             new ListCell[Console.Msg] {
+              styleClass += "console_cell"
               val input = item map {
                 case null => false
                 case Console.In(_, _) => true
@@ -100,6 +104,7 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
           }
         },
         new HBox {
+          id = "console_input"
           hgrow = Priority.Always
           var currentHistory: Int = 0
           filterEvent(KeyEvent.KeyPressed) { ev: KeyEvent =>
@@ -134,6 +139,7 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
             }
           }
           val input = new TextField {
+            id = "console_input_text"
             hgrow = Priority.Always
             onAction = { ae: ActionEvent => send }
             disable <== console.disabled
@@ -141,6 +147,7 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
           children = List(
             input,
             new Button {
+            id = "console_send"
               text = "Send"
               onAction = { ae: ActionEvent => send }
               disable <== console.disabled

@@ -51,6 +51,7 @@ class Job(job: JobModel, settings: Settings) {
 
   val stats = {
     val grid = new GridPane {
+      id = "job_stats"
       padding = Insets(18)
       gridLinesVisible = true
     }
@@ -64,17 +65,19 @@ class Job(job: JobModel, settings: Settings) {
   }
 
   val canvas = new Canvas() {
+    id = "job_canvas"
     width <== settings.bedWidth * 2.0
     height <== settings.bedDepth * 2.0
   }
 
   val bedImage = new StackPane {
+    id = "job_image"
     padding = Insets(10)
     children = List(
       new Rectangle {
+        id = "job_image_backgroud"
         width <== settings.bedWidth * 2.0
-        height <== settings.bedDepth *2.0
-        fill = Color.Aqua
+        height <== settings.bedDepth * 2.0
       },
       canvas)
   }
@@ -82,21 +85,23 @@ class Job(job: JobModel, settings: Settings) {
   val printStatus = {
 
     val grid = new GridPane {
+      id = "job_status"
       padding = Insets(18)
       gridLinesVisible = true
       visible <== job.jobActive
     }
     grid.addRow(0, statLabel("Started:"))
     grid.addRow(1, statLabel("Remaining time:"),
-        floatOut(job.fileStats.map { s => s.printTimeMinutes } - job.printStats.map {js => js.printTimeMinutes}))
+      floatOut(job.fileStats.map { s => s.printTimeMinutes } - job.printStats.map { js => js.printTimeMinutes }))
     grid.addRow(2, statLabel("Current height:"),
-        floatOut(job.printStats.map {js => js.currentPosition.z.getOrElse(0f)})
-        )
+      floatOut(job.printStats.map { js => js.currentPosition.z.getOrElse(0f) }))
     grid
   }
 
   val node: Node = new BorderPane {
+    id = "job"
     top = new HBox {
+      id = "job_file"
       hgrow = Priority.Always
       children = List(
         new ButtonBar {
@@ -128,10 +133,12 @@ class Job(job: JobModel, settings: Settings) {
     right = new VBox(stats, printStatus)
     center = bedImage
     bottom = new HBox {
+      id = "job_progress"
       visible <== job.jobActive
       hgrow = Priority.Always
       children = List(
         new ProgressBar {
+          id = "job_progress_bar"
           hgrow = Priority.Always
           maxWidth = 400
           progress <== job.printService.progress
@@ -139,8 +146,13 @@ class Job(job: JobModel, settings: Settings) {
     }
   }
 
-  def statLabel(txt: String) = new Label(txt)
+  def statLabel(txt: String) = { 
+    val lbl = new Label(txt)
+    lbl.styleClass += "job_label"
+    lbl
+  }
   def floatOut(value: NumberBinding): Node = new Text() {
+    styleClass += "job_output_text";
     text <== value.map { r => "%6.2f".format(r) }
   }
 
@@ -157,7 +169,7 @@ class Job(job: JobModel, settings: Settings) {
       job.updateFile(selected)
     }
   }
-  
+
   job.addFileListener(new JobModel.FileProcessListener {
     def callback() = {
       val gc = canvas.graphicsContext2D
@@ -171,11 +183,11 @@ class Job(job: JobModel, settings: Settings) {
         cmd match {
           case g1Move: GCode.G1Move if g1Move.extruder.isDefined =>
             lastXy.zip(xy).foreach {
-              case ((x0, y0), (x, y)) => gc.strokeLine(x0*2, y0*2, x*2, y*2)
+              case ((x0, y0), (x, y)) => gc.strokeLine(x0 * 2, y0 * 2, x * 2, y * 2)
             }
           case move: GCode.Move =>
             xy.foreach {
-              case (x, y) => gc.moveTo(x*2, y*2)
+              case (x, y) => gc.moveTo(x * 2, y * 2)
             }
           case cmd =>
         }

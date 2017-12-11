@@ -83,7 +83,6 @@ object ConsoleApp extends JFXApp {
   val css = this.getClass.getResource("/console.css")
 
   val _scene = new Scene {
-      fill = Color.rgb(38, 38, 38)
       stylesheets += css.toExternalForm
       root = new BorderPane {
         top = toolbar
@@ -115,6 +114,7 @@ object ConsoleApp extends JFXApp {
 
   def tabs: Node = {
     new TabPane {
+      id = "tabs_main"
       vgrow = Priority.Always
       hgrow = Priority.Always
       tabClosingPolicy = TabClosingPolicy.Unavailable
@@ -138,6 +138,7 @@ object ConsoleApp extends JFXApp {
 
   def status: Node = {
     new HBox {
+      id = "status"
       hgrow = Priority.Always
       children = new Text {
         text <== printerModel.status
@@ -146,7 +147,7 @@ object ConsoleApp extends JFXApp {
   }
 
   val apiServer = new ApiServer(printerModel, jobModel, settings)
-  FileWatcher(css,{ () => _scene.stylesheets = List(css.toExternalForm())})
+  FileWatcher(css,{ () => runInFxThread(_scene.stylesheets = List(css.toExternalForm()))})
   
   override def stopApp() {
     jobModel.printService.reset()

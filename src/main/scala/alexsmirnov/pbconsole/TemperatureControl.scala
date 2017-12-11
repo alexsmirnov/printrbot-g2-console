@@ -59,7 +59,7 @@ class TemperatureControl(printer: PrinterModel) {
   val extruderTargetData = ObservableBuffer.empty[DT]
 
   def series(name: String, data: ObservableBuffer[DT]) = {
-    val s = XYChart.Series[Number, Number](name,data)
+    val s = XYChart.Series[Number, Number](name, data)
     s
   }
 
@@ -101,6 +101,7 @@ class TemperatureControl(printer: PrinterModel) {
   }
   val chart = new LineChart[Number, Number](xAxis, yAxis, allDataSeries)
   chart.createSymbols = false
+  chart.id = "temp_chart"
 
   def tempControl(title: String, heater: PrinterModel.Heater, command: Float => GCode): Node = {
     val temperatureValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 300, 0, 5)
@@ -110,7 +111,9 @@ class TemperatureControl(printer: PrinterModel) {
       disable <== printer.connected.not()
     }
     new BorderPane {
+      styleClass += "temperature"
       top = new Text(title)
+      top().styleClass += "temperature_caption"
       center = new TextFlow(
         new Text("Temperature:"),
         new Text {
@@ -124,7 +127,10 @@ class TemperatureControl(printer: PrinterModel) {
         new Text {
           text <== heater.output.asString()
         })
+      center().styleClass += "temperature_label"
+
       bottom = new HBox {
+        styleClass += "temperature_control"
         children = List(
           new Button {
             text = "Off"
@@ -144,6 +150,7 @@ class TemperatureControl(printer: PrinterModel) {
     }
   }
   val node = new VBox {
+    id = "temperature"
     children = List(
       chart,
       tempControl("Extruder", printer.extruder, { t => GCode.ExtTempCommand(t) }),

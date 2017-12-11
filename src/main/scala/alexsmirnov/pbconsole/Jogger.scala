@@ -25,19 +25,7 @@ import scalafx.util.Duration
 import alexsmirnov.scalafx.ArrowButton
 
 class Jogger(printer: PrinterModel, settings: Settings) {
-
-  def moveButton(label: String, move: => Unit): Node = new Button(label) {
-    minWidth = 45
-    minHeight = 45
-    onAction = { ae: ActionEvent => move }
-    disable <== printer.connected.not()
-  }
-  def macroButton(label: String, commands: String*): Node = new Button(label) {
-    minWidth = 45
-    minHeight = 45
-    onAction = { ae: ActionEvent => printer.offer({ _ => commands.map(GCode(_)).iterator }, CommandSource.Monitor) }
-    disable <== printer.connected.not()
-  }
+  
   def move(axis: String, distance: Double, speed: Double = 1000) = printer.offer({ pos =>
     val command = GCode("G0 " + axis + distance + "F" + speed)
     if (pos.absolute) Iterator(GCode("G91"), command, GCode("G90")) else Iterator.single(command)
@@ -79,6 +67,7 @@ class Jogger(printer: PrinterModel, settings: Settings) {
   //    "M400",
   //    "G0X50Y100Z40F5000"))
   val macros = new FlowPane {
+    id = "macros"
     padding = Insets(10)
     hgap = 10
     vgap = 10
@@ -88,12 +77,15 @@ class Jogger(printer: PrinterModel, settings: Settings) {
   settings.macros.bindMap(macros.children) { m =>
     new Button() {
       margin = Insets(5)
+      styleClass += "macro"
       text <== m.nameProperty
       onAction = { ae: ActionEvent => printer.offer({ _ => Macro.prepare(m.content, settings).map(GCode(_)) }, CommandSource.Monitor) }
       disable <== printer.connected.not()
     }.delegate
   }
+  val extruderArrowBtn ="extruder" ::JoggerControl.ArrowBtn
   val node: Node = new BorderPane {
+    id = "jogger"
     padding = Insets(10)
     center = xyJogger
     right = new VBox {
@@ -103,12 +95,12 @@ class Jogger(printer: PrinterModel, settings: Settings) {
       children = List(
         new ArrowButton("-E", JoggerControl.arrowDim, ArrowButton.Up) {
           disable <== printer.connected.not()
-          styleClass ++= JoggerControl.ArrowBtn
+          styleClass ++= extruderArrowBtn
           armed.onChange(joggerButtonArmed(JoggerControl.EMinus, armed()))
         },
         new ArrowButton("+E", JoggerControl.arrowDim, ArrowButton.Down) {
           disable <== printer.connected.not()
-          styleClass ++= JoggerControl.ArrowBtn
+          styleClass ++= extruderArrowBtn
           armed.onChange(joggerButtonArmed(JoggerControl.EPlus, armed()))
         })
     }
