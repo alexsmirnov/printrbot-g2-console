@@ -39,7 +39,7 @@ object FilesRoute extends DefaultJsonProtocol {
 
 }
 class FilesRoute(job: JobModel, settings: Settings) extends ScalatraServlet with FileUploadSupport with SprayJsonSupport {
-  configureMultipartHandling(MultipartConfig(maxFileSize = Some(3 * 1024 * 1024)))
+  configureMultipartHandling(MultipartConfig(maxFileSize = Some(30 * 1024 * 1024)))
 
   import FilesRoute._
   val LOG = Logger.getLogger(this.getClass.getCanonicalName)
