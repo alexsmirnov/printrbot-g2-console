@@ -20,6 +20,7 @@ class ScalatraBootstrap(printer: PrinterModel, job: JobModel, config: Settings) 
       destroy(servletContext)
   }
   override def init(context: ServletContext) {
+    context mount (new VersionRoute(), "/api/version/*")
     context mount (new FilesRoute(job,config), "/api/files/*")
     context mount (new JobRoute(job,printer), "/api/job/*")
     context mount (new PrinterRoute(job,printer), "/api/printer/*")

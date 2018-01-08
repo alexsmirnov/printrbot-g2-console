@@ -92,7 +92,7 @@ temperature_control.hotend.set_m_code        104              #
 temperature_control.hotend.set_and_wait_m_code 109            #
 temperature_control.hotend.designator        T                #
 temperature_control.hotend.max_temp          270              # Set maximum temperature - Will prevent heating above 300 by default
-temperature_control.hotend.max_pwm           220              # Maximum PWM value for the heating element. This can be from 0 to 255.
+temperature_control.hotend.max_pwm           240              # Maximum PWM value for the heating element. This can be from 0 to 255.
 #64 is a good value if driving a 12v resistor with 24v. 255 is the default and the normal value if you are using the right voltage for your heating element.
 #temperature_control.hotend.min_temp         0                # Set minimum temperature - Will prevent heating below 0 by default
 

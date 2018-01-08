@@ -58,8 +58,8 @@ class FilesRoute(job: JobModel, settings: Settings) extends ScalatraServlet with
     fileParams.get("file").map { file =>
       //                  formFields('select.as[Boolean] ? false, 'print.as[Boolean] ? false) {
       //                    case (select, print) =>
-      val select = params.getOrElse("select", "false").toBoolean
-      val print = params.getOrElse("print", "false").toBoolean
+//      val select = params.getOrElse("select", "false").toBoolean
+//      val print = params.getOrElse("print", "false").toBoolean
       val fileName = file.name
       val loc = location(fileName)
       LOG.info(s"Upload request to files/local service, params $params , file ${fileName}")
