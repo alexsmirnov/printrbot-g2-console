@@ -48,10 +48,15 @@ assemblyMergeStrategy in assembly := {
     val oldStrategy = (assemblyMergeStrategy in assembly).value
     oldStrategy(x)
 }
-assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = false, includeDependency = true)
-//assemblyExcludedJars in assembly := {
-//  val cp = (fullClasspath in assembly).value
-//  cp filter {_.data.getName.startsWith("scalap-2")}
-//}
+assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = true, includeDependency = true)
+assemblyExcludedJars in assembly := {
+  val cp = (fullClasspath in assembly).value
+  cp filter {
+      j => j.data.getName.startsWith("scalap-2") || 
+      ( j.data.getName.startsWith("scala-") && 
+        !j.data.getName.startsWith("scala-library") && 
+        !j.data.getName.startsWith("scala-reflect") )
+      }
+}
 mainClass in assembly := Some("alexsmirnov.pbconsole.ConsoleApp")
 test in assembly := {}
