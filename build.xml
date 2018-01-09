@@ -1,0 +1,28 @@
+<project name="PbConsoleBundle" default="bundle" basedir=".">
+  <description>
+      app bundle for pbconsole app
+  </description>
+
+<target name="bundle">
+  <taskdef name="bundleapp"
+    classpath="lib_managed/jars/com.panayotis/appbundler/appbundler-1.1.0.jar"
+    classname="com.oracle.appbundler.AppBundlerTask"/>
+  <bundleapp
+      jvmrequired="1.8"
+      jrepreferred="true"
+      outputdirectory="target"
+      name="pbconsole"
+      displayname="3D Printer Console"
+      executableName="3DPrinterConsole"
+      identifier="asmirnov.pbconsole"
+      shortversion="0.01"
+      version="0.01"
+      icon="src/main/bundle/3d_printer.icns"
+      mainclassname="alexsmirnov.pbconsole.ConsoleApp"
+      copyright="2018 Alexander Smirnov"
+      applicationCategory="public.app-category.utils">
+      <classpath file="target/scala-2.11/pbconsole.jar"/>
+  </bundleapp>
+</target>
+
+</project>
