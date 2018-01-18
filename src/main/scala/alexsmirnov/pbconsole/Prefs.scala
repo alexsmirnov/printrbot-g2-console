@@ -71,7 +71,9 @@ class Prefs(settings: Settings) {
     "Jogger Extruder step" -> doubleText(settings.jogEstep),
     "Jogger Extruder speed" -> doubleText(settings.jogEspeed),
     "Job start GCode" -> textEdit(settings.jobStart),
-    "Job End GCode" -> textEdit(settings.jobEnd),
+    "Job end GCode" -> textEdit(settings.jobEnd),
+    "Pause start GCode" -> textEdit(settings.pauseStart),
+    "Pause end GCode" -> textEdit(settings.pauseEnd),
     "Upload folder" -> textField(settings.uploadFolder))
     
   props.id = "prefs_props"

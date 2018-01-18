@@ -20,6 +20,7 @@ import alexsmirnov.pbconsole.Settings
 import alexsmirnov.pbconsole.Macro
 import java.util.logging.Logger
 import alexsmirnov.pbconsole.gcode.GCode
+import scalafx.collections.ObservableBuffer
 
 object JobModel {
   trait FileProcessListener {
@@ -39,6 +40,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
   val jobPaused = BooleanProperty(false)
   val jobStartTime = ObjectProperty[LocalTime](LocalTime.now())
   val jobStats = ObjectProperty[PrintStats](ZeroStats)
+  val stopAtZpoints = ObservableBuffer.empty[Float]
   private[this] var fileListeners: List[JobModel.FileProcessListener] = Nil
   def addFileListener(listener: JobModel.FileProcessListener) {
     fileListeners = listener :: fileListeners
@@ -47,10 +49,11 @@ class JobModel(printer: PrinterModel, settings: Settings) {
     val callbacks = fileListeners.map(_.callback())
     gcodeFile().foreach { file =>
       val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
-      val stats = GCode.processProgram(src.getLines()).foldLeft(ZeroStats) { case (_,(cmd,stat)) =>
-        callbacks.foreach(_(cmd, stat.currentPosition))
-        stat
-        }
+      val stats = GCode.processProgram(src.getLines()).foldLeft(ZeroStats) {
+        case (_, (cmd, stat)) =>
+          callbacks.foreach(_(cmd, stat.currentPosition))
+          stat
+      }
       fileStats.update(stats)
     }
   }
@@ -58,16 +61,31 @@ class JobModel(printer: PrinterModel, settings: Settings) {
     gcodeFile.update(Some(file))
   }
 
- /**
- * Job cancel flag, to avoid thread interruption in stream
- */
-  @volatile 
+  /**
+   * Job cancel flag, to avoid thread interruption in stream
+   */
+  @volatile
   private[this] var jobCancelled: Boolean = true
+  @volatile
+  private[this] var paused: Boolean = false
 
   val printService = new JService[PrintStats] { srv =>
     override def createTask() = new JTask[PrintStats] { task =>
       // Check if print job is not cancelled
       def isActive(): Boolean = !(jobCancelled || task.isCancelled())
+      def print(cmd: GCode) {
+        if (isActive()) {
+          cmd match {
+            case ExtTempAndWaitCommand(t) =>
+              printer.print(ExtTempCommand(t))
+              while (printer.extruder.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
+            case BedTempAndWaitCommand(t) =>
+              printer.print(BedTempCommand(t))
+              while (printer.bed.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
+            case _ => printer.print(cmd)
+          }
+        }
+      }
       def call() = {
         // add 20 minutes for heatind and 10% for possible error
         val caffe = Process(Seq("caffeinate", "-i", "-t", ((jobStats().printTimeMinutes + 20) * 66).toInt.toString())).run()
@@ -76,22 +94,36 @@ class JobModel(printer: PrinterModel, settings: Settings) {
           val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
           // send header
           val lines = Macro.prepare(settings.jobStart(), settings) ++ src.getLines()
+          val stopPoints = stopAtZpoints.iterator
+          var nextStop = if(stopPoints.hasNext) Some(stopPoints.next()) else None
           try {
             LOG.info(s"Print job started")
-            GCode.processProgram(lines).foreach { case (cmd,currentStat) =>
-              if (isActive()) {
-                cmd match {
-                  case ExtTempAndWaitCommand(t) =>
-                    printer.print(ExtTempCommand(t))
-                    while (printer.extruder.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
-                  case BedTempAndWaitCommand(t) =>
-                    printer.print(BedTempCommand(t))
-                    while (printer.bed.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
-                  case _ => printer.print(cmd)
+            GCode.processProgram(lines).takeWhile { _ => isActive() }.foreach {
+              case (cmd, currentStat) =>
+                // check 'pause at Z status
+                nextStop.foreach{ z =>
+                  cmd match {
+                    case m:Move  => m.z.foreach { mz =>
+                      if(mz >= z) {
+                        runInFxThread(pause())
+                        nextStop = if(stopPoints.hasNext) Some(stopPoints.next()) else None
+                      }
+                    }
+                    case _ =>
+                  }
                 }
+                // pause print
+                if (paused) {
+                  Macro.prepare(settings.pauseStart(), settings).
+                    foreach { line => print(GCode(line)) }
+                  while (paused && isActive()) Thread.sleep(500)
+                  // continue after pause
+                  Macro.prepare(settings.pauseEnd(), settings).
+                    foreach { line => print(GCode(line)) }
+                }
+                print(cmd)
                 task.updateProgress(currentStat.printTimeMinutes, fileStats().printTimeMinutes)
                 task.updateValue(currentStat)
-              }
             }
           } catch {
             case ie: InterruptedException =>
@@ -101,8 +133,9 @@ class JobModel(printer: PrinterModel, settings: Settings) {
           } finally {
             LOG.info(s"Print job completed, send final GCode")
             // send footer
-            Macro.prepare(settings.jobEnd(), settings).foreach{ line => printer.print(GCode(line))}
+            Macro.prepare(settings.jobEnd(), settings).foreach { line => printer.print(GCode(line)) }
             caffe.destroy()
+            src.close()
             LOG.info(s"Print job finished")
           }
         }
@@ -112,9 +145,11 @@ class JobModel(printer: PrinterModel, settings: Settings) {
   }
 
   jobActive <== (printService.state === JWorker.State.SCHEDULED) or (printService.state === JWorker.State.RUNNING)
+  jobActive.onInvalidate(jobPaused.value = false)
+  jobPaused.onInvalidate { paused = jobPaused() }
 
-  val printStats = printService.value.map { ps => if(null == ps) ZeroStats else ps }
-  
+  val printStats = printService.value.map { ps => if (null == ps) ZeroStats else ps }
+
   def start() {
     if (gcodeFile().isDefined && !jobActive()) {
       printService.reset()
@@ -126,6 +161,6 @@ class JobModel(printer: PrinterModel, settings: Settings) {
     //    printService.cancel()
     jobCancelled = true
   }
-  def pause() {}
-  def resume() {}
+  def pause() { jobPaused.value = true }
+  def resume() { jobPaused.value = false }
 }

@@ -17,6 +17,8 @@ class Settings {
   val macros = new ObservableBuffer(FXCollections.observableArrayList(Macro.extractor))
   val jobStart = StringProperty("")
   val jobEnd = StringProperty("")
+  val pauseStart = StringProperty("")
+  val pauseEnd = StringProperty("")
   val uploadFolder = StringProperty("")
   val joggerInterval = DoubleProperty(10)
   val jogXYstep = DoubleProperty(1)
@@ -36,6 +38,8 @@ object Settings {
   val NUM_MACROS = "numMacros"
   val JS = "jobStart"
   val JE = "jobEnd"
+  val PS = "pauseStart"
+  val PE = "pauseEnd"
   val UF = "upload"
   val JOG_XY_STEP = "joggerXYstep"
   val JOG_XY_SPEED = "joggerXYspeed"
@@ -83,6 +87,8 @@ object Settings {
     }
     s.jobStart.update(node.get(JS,""))
     s.jobEnd.update(node.get(JE,""))
+    s.pauseStart.update(node.get(PS,""))
+    s.pauseEnd.update(node.get(PE,""))
     s
   }
   private def bindString(node: Preferences,property: StringProperty,key: String) {
@@ -103,6 +109,8 @@ object Settings {
     bindDouble(node, settings.zOffset, Z_OFFSET)
     bindString(node, settings.jobStart, JS)
     bindString(node, settings.jobEnd, JE)
+    bindString(node, settings.pauseStart, PS)
+    bindString(node, settings.pauseEnd, PE)
     bindString(node, settings.uploadFolder, UF)
     bindDouble(node,settings.joggerInterval,JOG_INTERVAL)
     bindDouble(node,settings.jogXYspeed,JOG_XY_SPEED)
