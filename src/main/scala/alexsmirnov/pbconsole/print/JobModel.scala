@@ -1,25 +1,20 @@
 package alexsmirnov.pbconsole.print
 
 import java.io.File
+import java.time.LocalTime
+import java.util.logging.Logger
+
+import scala.io.Codec
 import scala.sys.process._
 
+import alexsmirnov.pbconsole.Macro
+import alexsmirnov.pbconsole.PrinterModel
+import alexsmirnov.pbconsole.Settings
+import alexsmirnov.pbconsole.gcode.GCode
+import javafx.concurrent.{ Service => JService, Task => JTask, Worker => JWorker }
 import scalafx.Includes._
 import scalafx.beans.property.BooleanProperty
 import scalafx.beans.property.ObjectProperty
-import java.time.LocalDate
-import java.time.LocalTime
-import scalafx.scene.canvas.Canvas
-import alexsmirnov.pbconsole.PrinterModel
-import scala.io.Codec
-import javafx.concurrent.{ Service => JService, Task => JTask, Worker => JWorker }
-import scalafx.concurrent.Service
-import scalafx.concurrent.Task
-import alexsmirnov.pbconsole.CommandSource
-import scalafx.concurrent.WorkerStateEvent
-import alexsmirnov.pbconsole.Settings
-import alexsmirnov.pbconsole.Macro
-import java.util.logging.Logger
-import alexsmirnov.pbconsole.gcode.GCode
 import scalafx.collections.ObservableBuffer
 
 object JobModel {
@@ -28,7 +23,7 @@ object JobModel {
   }
 }
 class JobModel(printer: PrinterModel, settings: Settings) {
-  import GCode._
+  import alexsmirnov.pbconsole.gcode.GCode._
   val LOG = Logger.getLogger("alexsmirnov.pbconsole.print.JobModel")
   val gcodeFile = ObjectProperty[Option[File]](None)
   val fileStats = ObjectProperty[PrintStats](ZeroStats)
@@ -49,12 +44,16 @@ class JobModel(printer: PrinterModel, settings: Settings) {
     val callbacks = fileListeners.map(_.callback())
     gcodeFile().foreach { file =>
       val src = scala.io.Source.fromFile(file)(Codec.ISO8859)
-      val stats = GCode.processProgram(src.getLines()).foldLeft(ZeroStats) {
-        case (_, (cmd, stat)) =>
-          callbacks.foreach(_(cmd, stat.currentPosition))
-          stat
+      try {
+        val stats = GCode.processProgram(src.getLines()).foldLeft(ZeroStats) {
+          case (_, (cmd, stat)) =>
+            callbacks.foreach(_(cmd, stat.currentPosition))
+            stat
+        }
+        fileStats.update(stats)
+      } finally {
+        src.close()
       }
-      fileStats.update(stats)
     }
   }
   def updateFile(file: File) {
@@ -95,43 +94,40 @@ class JobModel(printer: PrinterModel, settings: Settings) {
           // send header
           val lines = Macro.prepare(settings.jobStart(), settings) ++ src.getLines()
           val stopPoints = stopAtZpoints.iterator
-          var nextStop = if(stopPoints.hasNext) Some(stopPoints.next()) else None
+          var nextStop = if (stopPoints.hasNext) Some(stopPoints.next()) else None
           try {
             LOG.info(s"Print job started")
             GCode.processProgram(lines).takeWhile { _ => isActive() }.foreach {
               case (cmd, currentStat) =>
                 // check 'pause at Z status
-                nextStop.foreach{ z =>
-                  cmd match {
-                    case m:Move  => m.z.foreach { mz =>
-                      if(mz >= z) {
-                        runInFxThread(pause())
-                        nextStop = if(stopPoints.hasNext) Some(stopPoints.next()) else None
-                      }
+                nextStop.foreach { z =>
+                  currentStat.currentPosition.z.foreach { mz =>
+                    if (mz >= z) {
+                      runInFxThread(pause())
+                      nextStop = if (stopPoints.hasNext) Some(stopPoints.next()) else None
                     }
-                    case _ =>
                   }
-                }
-                // pause print
-                if (paused) {
-                    LOG.info(s"Print job paused")
-                    val eTemp = printer.extruder.target
-                    val curX = currentStat.currentPosition.x.getOrElse(0)
-                    val curY = currentStat.currentPosition.y.getOrElse(0)
-                    val curZ = currentStat.currentPosition.z.getOrElse(0)
-                  Macro.prepare(settings.pauseStart(), settings).
-                    foreach { line => print(GCode(line)) }
-                  while (paused && isActive()) Thread.sleep(500)
-                  // continue after pause
-                    LOG.info(s"Print job resumed")
-                  Macro.prepare(settings.pauseEnd(), settings,
-                      "extruder"->eTemp,
-                      "X"->curX,"Y"->curY,"Z"->curZ).
-                    foreach { line => print(GCode(line)) }
                 }
                 print(cmd)
                 task.updateProgress(currentStat.printTimeMinutes, fileStats().printTimeMinutes)
                 task.updateValue(currentStat)
+                // pause print
+                if (paused) {
+                  LOG.info(s"Print job paused")
+                  val eTemp = printer.extruder.target
+                  val curX = currentStat.currentPosition.x.getOrElse(0)
+                  val curY = currentStat.currentPosition.y.getOrElse(0)
+                  val curZ = currentStat.currentPosition.z.getOrElse(0)
+                  Macro.prepare(settings.pauseStart(), settings).
+                    foreach { line => print(GCode(line)) }
+                  while (paused && isActive()) Thread.sleep(500)
+                  // continue after pause
+                  LOG.info(s"Print job resumed")
+                  Macro.prepare(settings.pauseEnd(), settings,
+                    "extruder" -> eTemp,
+                    "X" -> curX, "Y" -> curY, "Z" -> curZ).
+                    foreach { line => print(GCode(line)) }
+                }
             }
           } catch {
             case ie: InterruptedException =>
@@ -153,7 +149,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
   }
 
   jobActive <== (printService.state === JWorker.State.SCHEDULED) or (printService.state === JWorker.State.RUNNING)
-  jobActive.onInvalidate(jobPaused.value = false)
+  jobActive.onInvalidate(jobPaused.value= false)
   jobPaused.onInvalidate { paused = jobPaused() }
 
   val printStats = printService.value.map { ps => if (null == ps) ZeroStats else ps }
