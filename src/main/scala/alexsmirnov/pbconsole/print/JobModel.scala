@@ -75,9 +75,15 @@ class JobModel(printer: PrinterModel, settings: Settings) {
       def print(cmd: GCode) {
         if (isActive()) {
           cmd match {
+            // M0 pause command
+            case MCommand(0,_,_) => 
+                      runInFxThread(pause())
+                      paused = true
+            // wait for extruder temperature in loop, to allow monitoring and cancel
             case ExtTempAndWaitCommand(t) =>
               printer.print(ExtTempCommand(t))
               while (printer.extruder.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
+            // wait for bed temperature in loop, to allow monitoring and cancel
             case BedTempAndWaitCommand(t) =>
               printer.print(BedTempCommand(t))
               while (printer.bed.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
@@ -104,6 +110,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
                   currentStat.currentPosition.z.foreach { mz =>
                     if (mz >= z) {
                       runInFxThread(pause())
+                      paused = true
                       nextStop = if (stopPoints.hasNext) Some(stopPoints.next()) else None
                     }
                   }
@@ -158,6 +165,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
     if (gcodeFile().isDefined && !jobActive()) {
       printService.reset()
       jobCancelled = false
+      paused = false
       printService.start()
     }
   }
