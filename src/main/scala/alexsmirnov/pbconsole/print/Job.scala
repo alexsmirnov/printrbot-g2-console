@@ -34,6 +34,11 @@ import scalafx.scene.layout.Region
 import scalafx.scene.layout.VBox
 import scalafx.scene.control.ProgressBar
 import alexsmirnov.pbconsole.gcode.GCode
+import scalafx.scene.control.ListView
+import scalafx.scene.control.cell.TextFieldListCell
+import scalafx.util.converter.FloatStringConverter
+import scalafx.scene.control.SelectionModel
+import scalafx.scene.control.SelectionMode
 
 object Job {
   val LOG = Logger.getLogger("alexsmirnov.pbconsole.print.Job")
@@ -98,6 +103,29 @@ class Job(job: JobModel, settings: Settings) {
     grid
   }
 
+  val stopAtZlevels: Node = {
+    val list = new ListView[Float] {
+      id="stopAtZlist"
+      cellFactory = TextFieldListCell.forListView(new FloatStringConverter)
+      items = job.stopAtZpoints
+      editable = true
+      selectionModel().selectionMode = SelectionMode.Single
+    }
+    new VBox {
+      id="stopAtZ"
+      children = List(
+        list,
+        new ButtonBar {
+          buttons = List(new Button("+") {
+          onAction = { ae: ActionEvent => job.stopAtZpoints.add(0.0F) }
+
+          },new Button("-") {
+          onAction = { ae: ActionEvent => list.selectionModel().getSelectedIndices.foreach(job.stopAtZpoints.remove(_)) }
+          })
+        })
+    }
+  }
+
   val node: Node = new BorderPane {
     id = "job"
     top = new HBox {
@@ -130,7 +158,7 @@ class Job(job: JobModel, settings: Settings) {
         },
         new Separator())
     }
-    right = new VBox(stats, printStatus)
+    right = new VBox(stats, stopAtZlevels, printStatus)
     center = bedImage
     bottom = new HBox {
       id = "job_progress"
@@ -146,7 +174,7 @@ class Job(job: JobModel, settings: Settings) {
     }
   }
 
-  def statLabel(txt: String) = { 
+  def statLabel(txt: String) = {
     val lbl = new Label(txt)
     lbl.styleClass += "job_label"
     lbl

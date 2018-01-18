@@ -31,12 +31,13 @@ object Macro {
     m.content = content
     m
   }
-  def prepare(content: String,conf: Settings): Iterator[String] = {
+  def prepare(content: String,conf: Settings,params: (String,Any) *): Iterator[String] = {
     val values = new HashMap[String,Any]
     values.put(BED_W, conf.bedWidth())
     values.put(BED_D, conf.bedDepth())
     values.put(H, conf.height())
     values.put(Z_OFFSET, conf.zOffset())
+    params.foreach{ case (name,value) => values.put(name, value) }
     val sub = new StrSubstitutor(values)
     val src = Source.fromString(sub.replace(content))
     src.getLines()

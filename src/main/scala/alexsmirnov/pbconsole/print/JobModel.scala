@@ -114,11 +114,19 @@ class JobModel(printer: PrinterModel, settings: Settings) {
                 }
                 // pause print
                 if (paused) {
+                    LOG.info(s"Print job paused")
+                    val eTemp = printer.extruder.target
+                    val curX = currentStat.currentPosition.x.getOrElse(0)
+                    val curY = currentStat.currentPosition.y.getOrElse(0)
+                    val curZ = currentStat.currentPosition.z.getOrElse(0)
                   Macro.prepare(settings.pauseStart(), settings).
                     foreach { line => print(GCode(line)) }
                   while (paused && isActive()) Thread.sleep(500)
                   // continue after pause
-                  Macro.prepare(settings.pauseEnd(), settings).
+                    LOG.info(s"Print job resumed")
+                  Macro.prepare(settings.pauseEnd(), settings,
+                      "extruder"->eTemp,
+                      "X"->curX,"Y"->curY,"Z"->curZ).
                     foreach { line => print(GCode(line)) }
                 }
                 print(cmd)
