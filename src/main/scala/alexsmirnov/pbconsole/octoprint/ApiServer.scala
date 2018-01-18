@@ -16,7 +16,7 @@ class ApiServer(printer: PrinterModel, job: JobModel, config: Settings)  {
     val server = new Server(5000)
     val context = new WebAppContext()
     context setContextPath "/"
-//    context.setResourceBase("src/main/webapp")
+    context.setResourceBase("src/main/webapp")
     context.addEventListener(new ScalatraBootstrap(printer,job,config))
     context.addServlet(classOf[DefaultServlet], "/")
 
