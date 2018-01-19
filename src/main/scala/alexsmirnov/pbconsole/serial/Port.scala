@@ -4,7 +4,7 @@ import java.io.Closeable
 import java.util.concurrent.Executors
 import java.util.concurrent.ThreadFactory
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 
 import scala.concurrent.ExecutionContext
 import scala.util.matching.Regex
@@ -17,7 +17,7 @@ import org.reactivestreams.Subscriber
  *
  */
 object Port {
-  val LOG = Logger.getLogger("alexsmirnov.pbconsole.serial.Port")
+  val LOG = LoggerFactory.getLogger("alexsmirnov.pbconsole.serial.Port")
   def threadFactory(name: String,daemon: Boolean=true) = new ThreadFactory {
         val count = new AtomicInteger
         def newThread(r: Runnable) = {

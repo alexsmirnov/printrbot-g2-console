@@ -1,7 +1,7 @@
 package alexsmirnov.pbconsole.octoprint
 
 import java.io.File
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 
 import org.scalatra.Created
 import org.scalatra.ScalatraServlet
@@ -42,7 +42,7 @@ class FilesRoute(job: JobModel, settings: Settings) extends ScalatraServlet with
   configureMultipartHandling(MultipartConfig(maxFileSize = Some(30 * 1024 * 1024)))
 
   import FilesRoute._
-  val LOG = Logger.getLogger(this.getClass.getCanonicalName)
+  val LOG = LoggerFactory.getLogger(this.getClass.getCanonicalName)
   def filesResponse() = {
     // all files
     val uploadFolder = new File(settings.uploadFolder())

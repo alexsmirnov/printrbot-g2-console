@@ -10,7 +10,7 @@ import java.io.File
 import java.nio.file.FileSystem
 import com.sun.nio.file.SensitivityWatchEventModifier
 import java.nio.file.WatchEvent
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 
 class FileWatcher(path: Path, file: String, onChange: () => Unit) extends Runnable {
   override def run() {
@@ -47,7 +47,7 @@ class FileWatcher(path: Path, file: String, onChange: () => Unit) extends Runnab
 }
 
 object FileWatcher {
-  val LOG = Logger.getLogger("alexsmirnov.pbconsole.FileWatcher")
+  val LOG = LoggerFactory.getLogger("alexsmirnov.pbconsole.FileWatcher")
   def apply(resource: URL, listener: () => Unit) = {
     if (resource.getProtocol.equalsIgnoreCase("file")) {
       val file = new File(resource.toURI())

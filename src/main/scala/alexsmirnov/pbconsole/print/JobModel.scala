@@ -2,7 +2,7 @@ package alexsmirnov.pbconsole.print
 
 import java.io.File
 import java.time.LocalTime
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 
 import scala.io.Codec
 import scala.sys.process._
@@ -16,15 +16,19 @@ import scalafx.Includes._
 import scalafx.beans.property.BooleanProperty
 import scalafx.beans.property.ObjectProperty
 import scalafx.collections.ObservableBuffer
+import scalafx.scene.media.AudioClip
 
 object JobModel {
   trait FileProcessListener {
     def callback(): ((GCode, GCode.Position) => Unit)
   }
+  lazy val pauseNotification = new AudioClip(this.getClass.getResource("/serious-strike.mp3").toExternalForm()){
+//    cycleCount = 10
+  }
 }
 class JobModel(printer: PrinterModel, settings: Settings) {
   import alexsmirnov.pbconsole.gcode.GCode._
-  val LOG = Logger.getLogger("alexsmirnov.pbconsole.print.JobModel")
+  val LOG = LoggerFactory.getLogger("alexsmirnov.pbconsole.print.JobModel")
   val gcodeFile = ObjectProperty[Option[File]](None)
   val fileStats = ObjectProperty[PrintStats](ZeroStats)
   val noFile = BooleanProperty(true)
@@ -77,7 +81,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
           cmd match {
             // M0 pause command
             case MCommand(0,_,_) => 
-                      runInFxThread(pause())
+                      runInFxThread({pause();JobModel.pauseNotification.play()})
                       paused = true
             // wait for extruder temperature in loop, to allow monitoring and cancel
             case ExtTempAndWaitCommand(t) =>
@@ -109,7 +113,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
                 nextStop.foreach { z =>
                   currentStat.currentPosition.z.foreach { mz =>
                     if (mz >= z) {
-                      runInFxThread(pause())
+                      runInFxThread({pause();JobModel.pauseNotification.play()})
                       paused = true
                       nextStop = if (stopPoints.hasNext) Some(stopPoints.next()) else None
                     }
@@ -139,7 +143,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
           } catch {
             case ie: InterruptedException =>
               val ts = Thread.currentThread().isInterrupted()
-              LOG.warning(s"Print tread interrupted. Thread interrupt state $ts")
+              LOG.warn(s"Print tread interrupted. Thread interrupt state $ts")
 
           } finally {
             LOG.info(s"Print job completed, send final GCode")

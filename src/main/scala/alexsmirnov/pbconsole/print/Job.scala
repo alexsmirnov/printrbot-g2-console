@@ -28,7 +28,7 @@ import scalafx.scene.canvas.Canvas
 import scalafx.scene.layout.StackPane
 import scalafx.scene.shape.Rectangle
 import scalafx.scene.paint.Color
-import java.util.logging.Logger
+import org.slf4j.LoggerFactory
 import scalafx.scene.control.ButtonBar
 import scalafx.scene.layout.Region
 import scalafx.scene.layout.VBox
@@ -41,7 +41,7 @@ import scalafx.scene.control.SelectionModel
 import scalafx.scene.control.SelectionMode
 
 object Job {
-  val LOG = Logger.getLogger("alexsmirnov.pbconsole.print.Job")
+  val LOG = LoggerFactory.getLogger("alexsmirnov.pbconsole.print.Job")
 
   val openGcodeDialog = new FileChooser {
     title = "Open Gcode File"

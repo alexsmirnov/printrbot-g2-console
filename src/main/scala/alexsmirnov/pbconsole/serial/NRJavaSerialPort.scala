@@ -55,7 +55,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port with Publis
     }
     f.onComplete {
       case Success(sr) => connect(sr)
-      case Failure(err) => LOG.severe(s"Error in port watch process ${err.getMessage}")
+      case Failure(err) => LOG.error(s"Error in port watch process ${err.getMessage}")
     }
   }
 
@@ -71,7 +71,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port with Publis
         val inThread = startReceiver(sr)
         connection = Some((sr, inThread))
       } else {
-        LOG.severe("failed to connect serial port")
+        LOG.error("failed to connect serial port")
         waitForConnect
       }
     }
@@ -109,7 +109,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port with Publis
             }
           }
         } catch {
-          case ex: Exception => LOG.warning(s"Exception in receiver thread ${ex.getMessage}")
+          case ex: Exception => LOG.warn(s"Exception in receiver thread ${ex.getMessage}")
         } finally {
           LOG.info(s"Receiver thread finished")
           if (connection.isDefined) disconnect()
@@ -122,7 +122,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port with Publis
       def serialEvent(ev: SerialPortEvent) {
         ev.getEventType match {
           case SerialPortEvent.DATA_AVAILABLE =>
-            LOG.fine("Data available"); LockSupport.unpark(t)
+            LOG.trace("Data available"); LockSupport.unpark(t)
           case et => LOG.info(s"Received event $et")
         }
       }
@@ -138,7 +138,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port with Publis
           c.getOutputStream.write(t)
         } catch {
           case iot: IOException =>
-            LOG.severe(s"IO error on output to serial port ${iot.getMessage}")
+            LOG.error(s"IO error on output to serial port ${iot.getMessage}")
             disconnect()
         } finally {
           request(1)
