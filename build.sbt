@@ -55,6 +55,7 @@ assemblyExcludedJars in assembly := {
       j => j.data.getName.startsWith("scalap-2") || 
       ( j.data.getName.startsWith("scala-") && 
         !j.data.getName.startsWith("scala-library") && 
+        !j.data.getName.startsWith("scala-parser-combinators") && 
         !j.data.getName.startsWith("scala-reflect") )
       }
 }
