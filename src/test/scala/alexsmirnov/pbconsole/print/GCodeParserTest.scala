@@ -9,7 +9,7 @@ class GCodeParserTest extends FlatSpec with Matchers {
   
   def parseTo(cmd: String,expected: GCode) {
     it should s"parsed as $expected" in { 
-       assert( GCode.apply(cmd) === expected)
+       assert( GCode.apply(cmd).head === expected)
     }
   }
   
@@ -30,6 +30,14 @@ class GCodeParserTest extends FlatSpec with Matchers {
   "Empty line" should behave like parseTo("",GCode.EmptyCommand)
   "Blank line" should behave like parseTo("   ",GCode.EmptyCommand)
   "Comment line" should behave like parseTo("; comment",GCode.EmptyCommand)
+  "T1" should behave like parseTo("T1",GCode.ToolCommand(1))
+  "M104S100" should behave like parseTo("M104S100",GCode.ExtTempCommand(100.0f))
+  "M104 S100 T1" should "parsed as tool with extruder temp" in {
+    assert(  List(GCode.ToolCommand(1),GCode.ExtTempCommand(100.0f)) === GCode.apply("M104S100 T1") )
+  }
+  "M140 T0 S100" should "parsed as tool with bed temp" in {
+    assert(  List(GCode.ToolCommand(0),GCode.BedTempCommand(100.0f)) === GCode.apply("M140 T0 S100") )
+  }
   "estimate print" should "calculate boundaries and print time" in {
     val lines = Source.fromFile("3mmBox_export.gcode").getLines()
     val stats = GCode.estimatePrint(lines)

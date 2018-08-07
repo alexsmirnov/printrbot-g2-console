@@ -17,6 +17,8 @@ object GCode {
   val MCmd = """^M(\d+)\s*(.*)""".r
   val MoveParams = """\s*([XYZABEF])(\d+\.?\d*)""".r
   val NoComment = """^\s*([^;]+)\s*;?.*$""".r
+  val Tool = """^(.*)T(\d+)(.*)$""".r
+  val Empty = """^(\s*)$""".r
 
   def dist(from: Option[Float], to: Option[Float]): Float = from.flatMap { f => to.map(_ - f) }.getOrElse(0.0f)
 
@@ -83,21 +85,38 @@ object GCode {
   case class GCommand(n: Int, params: String, line: String) extends Command
 
   case class MCommand(n: Int, params: String, line: String) extends Command
+  
+  case class ToolCommand(n: Int) extends Command {
+    val line: String = "T"+n
+  }
 
   case class UnknownCommand(line: String) extends GCode
 
   case object EmptyCommand extends Command {
     val line = ""
   }
+  // Predefined commands
+  val M105 = MCommand(105,"","M105")
+  val M82 = MCommand(82,"","M82")
+  val M83 = MCommand(83,"","M83")
+  val G90 = GCommand(90,"","G90")
+  val G91 = GCommand(91,"","G91")
+  val G28 = GCommand(28,"","G28")
 
   def stripComment(line: String) = NoComment.findFirstMatchIn(line).map(_.subgroups(0).trim).getOrElse("")
 
   def parseParams(params: String) = MoveParams.findAllMatchIn(params).map { m => m.subgroups(0).head -> (m.subgroups(1).toFloat) }.toMap
 
-  def apply(line: String): GCode = {
+  def apply(line: String): List[GCode] = {
     val strip = stripComment(line)
     strip match {
-      case "" => EmptyCommand
+      case Tool(a,n,b) => List(ToolCommand(n.toInt), parse(a+b))
+      case _ => List(parse(strip))
+    }
+  }
+  def parse(strip: String): GCode = {  
+    strip match {
+      case Empty(_) => EmptyCommand
       case G0Cmd(params) => G0Move(parseParams(params), strip)
       case G1Cmd(params) => G1Move(parseParams(params), strip)
       case G92Cmd(params) => G92SetPos(parseParams(params), strip)
@@ -131,9 +150,9 @@ object GCode {
   val ZeroStats = PrintStats(range(0, 0), range(0, 0), range(0, 0), 0f, 0L,UnknownPosition)
   def estimatePrint(lines: Iterator[String]) = processProgram(lines).foldLeft(ZeroStats){ (l,r) => r._2 }
   def processProgram(lines: Iterator[String]): Iterator[(GCode,PrintStats)] = {
-    lines.scanLeft[(GCode,PrintStats)]((EmptyCommand,EmptyStats)) { (stp, line) =>
+    lines.flatMap(apply).scanLeft[(GCode,PrintStats)]((EmptyCommand,EmptyStats)) { (stp, cmd) =>
       val (_,currentStats) = stp
-      apply(line) match {
+      cmd match {
         case move: G92SetPos =>
           val nextPosition = currentStats.currentPosition.moveTo(move)
           (move,  currentStats.copy(currentPosition=nextPosition))

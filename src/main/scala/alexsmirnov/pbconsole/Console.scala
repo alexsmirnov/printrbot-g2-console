@@ -130,7 +130,7 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
           }
           def send {
             if (!input.text().trim().isEmpty()) {
-              if (printer.offer(GCode(input.text()), CommandSource.Console)) {
+              if (printer.offer({_ => GCode(input.text()).iterator}, CommandSource.Console)) {
                 history = input.text() :: history
                 currentHistory = 0
                 input.clear()

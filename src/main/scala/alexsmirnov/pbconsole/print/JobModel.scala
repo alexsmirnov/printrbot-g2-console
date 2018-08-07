@@ -130,14 +130,14 @@ class JobModel(printer: PrinterModel, settings: Settings) {
                   val curY = currentStat.currentPosition.y.getOrElse(0)
                   val curZ = currentStat.currentPosition.z.getOrElse(0)
                   Macro.prepare(settings.pauseStart(), settings).
-                    foreach { line => print(GCode(line)) }
+                    flatMap { line => GCode(line) }.foreach(print)
                   while (paused && isActive()) Thread.sleep(500)
                   // continue after pause
                   LOG.info(s"Print job resumed")
                   Macro.prepare(settings.pauseEnd(), settings,
                     "extruder" -> eTemp,
                     "X" -> curX, "Y" -> curY, "Z" -> curZ).
-                    foreach { line => print(GCode(line)) }
+                    flatMap { line => GCode(line) }.foreach(print)
                 }
             }
           } catch {
@@ -148,7 +148,8 @@ class JobModel(printer: PrinterModel, settings: Settings) {
           } finally {
             LOG.info(s"Print job completed, send final GCode")
             // send footer
-            Macro.prepare(settings.jobEnd(), settings).foreach { line => printer.print(GCode(line)) }
+            Macro.prepare(settings.jobEnd(), settings).
+                    flatMap { line => GCode(line) }.foreach(print)
             caffe.destroy()
             src.close()
             LOG.info(s"Print job finished")

@@ -27,13 +27,13 @@ import alexsmirnov.scalafx.ArrowButton
 class Jogger(printer: PrinterModel, settings: Settings) {
   
   def move(axis: String, distance: Double, speed: Double = 1000) = printer.offer({ pos =>
-    val command = GCode("G0 " + axis + distance + "F" + speed)
-    if (pos.absolute) Iterator(GCode("G91"), command, GCode("G90")) else Iterator.single(command)
+    val command = GCode.parse("G0 " + axis + distance + "F" + speed)
+    if (pos.absolute) Iterator(GCode.G91, command, GCode.G90) else Iterator.single(command)
   }, CommandSource.Monitor)
 
   def moveExtruder(tool: String, distance: Double, speed: Double) = printer.offer({ pos =>
-    val cmd = GCode(s"G0 ${tool}${distance} F${speed}")
-    if (pos.extruderAbsolute) Iterator(GCode("M83"), cmd, GCode("M82")) else Iterator(cmd)
+    val cmd = GCode.parse(s"G0 ${tool}${distance} F${speed}")
+    if (pos.extruderAbsolute) Iterator(GCode.M83, cmd, GCode.M82) else Iterator.single(cmd)
   }, CommandSource.Monitor)
 
   val ssize = 2
@@ -58,7 +58,7 @@ class Jogger(printer: PrinterModel, settings: Settings) {
 
   xyJogger.disable <== printer.connected.not()
   xyJogger.onAxisArmed(joggerButtonArmed _)
-  xyJogger.onHomeAction(printer.offer({ _ => Iterator(GCode("G28")) }, CommandSource.Monitor))
+  xyJogger.onHomeAction(printer.offer({ _ => GCode("G28").iterator }, CommandSource.Monitor))
   //  val macros = ObservableBuffer("Bed Level" -> Seq("G38.4",
   //    "M400",
   //    "G32",
@@ -79,7 +79,7 @@ class Jogger(printer: PrinterModel, settings: Settings) {
       margin = Insets(5)
       styleClass += "macro"
       text <== m.nameProperty
-      onAction = { ae: ActionEvent => printer.offer({ _ => Macro.prepare(m.content, settings).map(GCode(_)) }, CommandSource.Monitor) }
+      onAction = { ae: ActionEvent => printer.offer({ _ => Macro.prepare(m.content, settings).flatMap(GCode(_)) }, CommandSource.Monitor) }
       disable <== printer.connected.not()
     }.delegate
   }

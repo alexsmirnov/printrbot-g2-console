@@ -5,7 +5,7 @@ retrieveManaged := true
 version := "0.0.1"
 val ScalatraVersion = "2.5.3"
 // Version of Scala used by the project
-scalaVersion := "2.11.11"
+scalaVersion := "2.12.3"
 // dependencyOverrides += "org.scala-lang" % "scala-compiler" % scalaVersion.value
 // Add dependency on ScalaFX library
 libraryDependencies += "org.scalafx" %% "scalafx" % "8.0.144-R12"
@@ -26,7 +26,7 @@ libraryDependencies ++= Seq(
   "javax.servlet" % "javax.servlet-api" % "3.1.0"
 )
 libraryDependencies += "io.spray" %%  "spray-json" % "1.3.3"
-libraryDependencies += "org.scalatest" % "scalatest_2.11" % "3.0.1" % "test"
+libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 libraryDependencies += "org.mockito" % "mockito-core" % "2.7.1"
 libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
 libraryDependencies += "com.panayotis" % "appbundler" % "1.1.0" % "test"

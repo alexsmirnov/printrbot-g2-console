@@ -70,9 +70,9 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests with Ma
     }
     received
   }
-  def cmd(lines: String *) = {_: Printer.Positioning => lines.iterator.map(GCode(_))}
+  def cmd(lines: String *) = {_: Printer.Positioning => lines.iterator.flatMap(GCode(_))}
 
-  val dataStream = Stream.from(1).map { n => GCode(s"G$n X$n Y$n") }
+  val dataStream = Stream.from(1).flatMap { n => GCode(s"G$n X$n Y$n") }
   val commandStream = Stream.from(1).map { n => "{sr:{}}" }
   
   def print( fp: (Semaphore,Printer), size: Int ) = {
@@ -128,7 +128,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests with Ma
   "query" should "send command to printer" in { fp =>
     val (semaphore, p) = fp
     startAndWait(p)
-    p.query(GCode("M2"), CommandSource.Monitor)
+    p.query(GCode.parse("M2"), CommandSource.Monitor)
     eventually{ assert(semaphore.hasQueuedThreads) }
   }
   
@@ -136,14 +136,14 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests with Ma
     val (semaphore, p) = fp
     startAndWait(p)
     // Failed future has defined value
-    val sent = Seq.fill(QUEUE_SIZE*2)(GCode("G3")).takeWhile( p.query(_, CommandSource.Console).value.isEmpty).size
+    val sent = Seq.fill(QUEUE_SIZE*2)(GCode.parse("G3")).takeWhile( p.query(_, CommandSource.Console).value.isEmpty).size
     sent should be (QUEUE_SIZE)
   }
 
   it should "complete future on receive response" in { fp =>
     val (semaphore, p) = fp
     startAndWait(p)
-    val f = p.query(GCode("M105"), CommandSource.Monitor)
+    val f = p.query(GCode.M105, CommandSource.Monitor)
     semaphore.release()
     eventually(assert(f.isCompleted,"future not completed"))
     f.value should not be empty
@@ -153,7 +153,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests with Ma
 
   it should "reject command if printer disconnected" in { fp =>
     val (semaphore, p) = fp
-    val f = p.query(GCode("M105"), CommandSource.Monitor)
+    val f = p.query(GCode.M105, CommandSource.Monitor)
     assert(f.isCompleted,"future not completed")
     f.value should not be empty
     f.value.get shouldBe a[Failure[_]]
@@ -162,7 +162,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests with Ma
   it should "receive response while printing" in { fp =>
     val (semaphore, p) = fp
     val received = print(fp,100)
-    val f = p.query(GCode("M105"), CommandSource.Monitor)
+    val f = p.query(GCode.M105, CommandSource.Monitor)
     eventually(assert(f.isCompleted,"future not completed"))
     f.value should not be empty
     f.value.get shouldBe a[Success[_]]
@@ -173,7 +173,7 @@ class PrinterTest extends FlatSpec with Eventually with TimeLimitedTests with Ma
   "print" should "send data to printer" in { fp =>
     val (semaphore, p) = fp
     startAndWait(p)
-    p.sendData(GCode("M2"), CommandSource.Monitor)
+    p.sendData(GCode.parse("M2"), CommandSource.Monitor)
     eventually{ assert(semaphore.hasQueuedThreads) }
   }
   

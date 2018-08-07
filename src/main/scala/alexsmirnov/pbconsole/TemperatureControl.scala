@@ -70,7 +70,7 @@ class TemperatureControl(printer: PrinterModel) {
     series("Bed target", bedTargetData))
 
   val scheduler = {
-    val s = ScheduledService(Task { if (printer.connected()) Await.result(printer.query(GCode("M105"), CommandSource.Monitor), 5.seconds) else Nil })
+    val s = ScheduledService(Task { if (printer.connected()) Await.result(printer.query(GCode.M105, CommandSource.Monitor), 5.seconds) else Nil })
     s.period = FXDuration(2000.0)
     s.delay = FXDuration(2000.0)
     s.restartOnFailure = true
