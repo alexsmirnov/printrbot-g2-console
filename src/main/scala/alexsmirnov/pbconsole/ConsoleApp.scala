@@ -73,7 +73,7 @@ object ConsoleApp extends JFXApp {
 
   val printer = PrinterImpl(parameters.named)
 
-  val printerModel = new PrinterModel(printer)
+  val printerModel = new PrinterModel(printer,2)
 
   val jobModel = new JobModel(printerModel, settings)
   val console = new Console(printerModel, settings)

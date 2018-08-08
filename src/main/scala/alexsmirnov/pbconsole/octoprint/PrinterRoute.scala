@@ -31,7 +31,7 @@ class PrinterRoute(job: JobModel, printer: PrinterModel) extends ScalatraServlet
   get("/") {
     val text = if (printer.connected()) { if (job.jobActive()) "Printing" else "Operational" } else "Disconnected"
     val flags = StateFlags(printer.connected(), job.jobPaused(), job.jobActive(), printer.connected() && !job.jobActive())
-    val tempState = TemperatureState(temperatureData(printer.extruder), temperatureData(printer.bed))
+    val tempState = TemperatureState(temperatureData(printer.extruders.head), temperatureData(printer.bed))
     StateResponse(tempState, PrinterState(text, flags)).toJson
   }
 }

@@ -18,9 +18,9 @@ trait StatusResponse extends Response {
 sealed trait ResponseValue
 
 // Temperature status
-case class ExtruderTemp(value: Float) extends ResponseValue
-case class ExtruderTarget(value: Float) extends ResponseValue
-case class ExtruderOutput(pwm: Int) extends ResponseValue
+case class ExtruderTemp(value: Float,tool: Int =0) extends ResponseValue
+case class ExtruderTarget(value: Float,tool: Int =0) extends ResponseValue
+case class ExtruderOutput(pwm: Int,tool: Int =0) extends ResponseValue
 case class BedTemp(value: Float) extends ResponseValue
 case class BedTarget(value: Float) extends ResponseValue
 case class BedOutput(pwm: Int) extends ResponseValue

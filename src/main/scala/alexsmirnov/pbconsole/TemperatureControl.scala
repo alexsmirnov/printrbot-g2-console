@@ -26,6 +26,7 @@ import scalafx.util.converter.FloatStringConverter
 import scalafx.scene.control.TextField
 import scalafx.scene.control.Spinner
 import scalafx.scene.control.SpinnerValueFactory
+import alexsmirnov.pbconsole.serial.Printer
 import alexsmirnov.pbconsole.gcode.ExtruderTemp
 import alexsmirnov.pbconsole.gcode.ExtruderTarget
 import alexsmirnov.pbconsole.gcode.ExtruderOutput
@@ -82,11 +83,11 @@ class TemperatureControl(printer: PrinterModel) {
         xAxis.upperBound = ticks
         allDataSeries.foreach { ds => removeOlderThan(ticks, ds.data()) }
         lv.foreach {
-          case ExtruderTemp(t) =>
-            extruderTempData += toChartData(ticks, t); printer.extruder.temperature.update(t)
-          case ExtruderTarget(t) =>
-            extruderTargetData += toChartData(ticks, t); printer.extruder.target.update(t)
-          case ExtruderOutput(n) => printer.extruder.output.update(n)
+          case ExtruderTemp(t,tool)  if printer.extruders.isDefinedAt(tool) =>
+            extruderTempData += toChartData(ticks, t); printer.extruders(tool).temperature.update(t)
+          case ExtruderTarget(t,tool) if printer.extruders.isDefinedAt(tool) =>
+            extruderTargetData += toChartData(ticks, t); printer.extruders(tool).target.update(t)
+          case ExtruderOutput(n,tool)  if printer.extruders.isDefinedAt(tool) => printer.extruders(tool).output.update(n)
           case BedTemp(t) =>
             bedTempData += toChartData(ticks, t); printer.bed.temperature.update(t)
           case BedTarget(t) =>
@@ -103,7 +104,7 @@ class TemperatureControl(printer: PrinterModel) {
   chart.createSymbols = false
   chart.id = "temp_chart"
 
-  def tempControl(title: String, heater: PrinterModel.Heater, command: Float => GCode): Node = {
+  def tempControl(title: String, heater: PrinterModel.Heater, command: Float => Printer.GCodeProducer): Node = {
     val temperatureValueFactory = new SpinnerValueFactory.IntegerSpinnerValueFactory(0, 300, 0, 5)
     val temperature = new Spinner[Integer] {
       editable = true
@@ -151,9 +152,14 @@ class TemperatureControl(printer: PrinterModel) {
   }
   val node = new VBox {
     id = "temperature"
-    children = List(
-      chart,
-      tempControl("Extruder", printer.extruder, { t => GCode.ExtTempCommand(t) }),
-      tempControl("Heated Bed", printer.bed, { t => GCode.BedTempCommand(t) }))
+    children = chart ::
+      (printer.extruders.zipWithIndex.map { 
+         case (extruder,n) => tempControl("Extruder "+n, extruder, { t => 
+           { pos => {
+             Iterator(GCode.ToolCommand(n), GCode.ExtTempCommand(t),GCode.ToolCommand(pos.tool)) 
+             }
+           }
+         }) 
+      } :+ tempControl("Heated Bed", printer.bed, { t => { _ => Iterator.single(GCode.BedTempCommand(t)) }}) ) 
   }
 }

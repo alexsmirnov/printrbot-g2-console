@@ -31,14 +31,14 @@ object PrinterModel {
     val extruder = DoubleProperty(0.0)
   }
 }
-class PrinterModel(printer: PrinterImpl) {
+class PrinterModel(printer: PrinterImpl, numOfExtruders: Int) {
   import PrinterModel._
   // Current status
   val connected = BooleanProperty(false)
   val speed = IntegerProperty(0)
   val port = StringProperty("")
 
-  val extruder = new Heater
+  val extruders = List.fill(numOfExtruders)( new Heater )
   val bed = new Heater
   val position = new Position
 

@@ -46,8 +46,9 @@ object JoggerControl {
   case object YMinus extends Dir("Y", -1)
   case object ZPlus extends Dir("Z", 1)
   case object ZMinus extends Dir("Z", -1)
-  case object EPlus extends Dir("E", 1)
-  case object EMinus extends Dir("E", -1)
+  sealed trait EStep { def tool: Int }
+  case class EPlus(tool: Int) extends Dir("E", 1) with EStep
+  case class EMinus(tool: Int) extends Dir("E", -1) with EStep
 }
 class JoggerControl extends HBox { root =>
   import JoggerControl._

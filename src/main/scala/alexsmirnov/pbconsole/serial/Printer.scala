@@ -7,7 +7,7 @@ import alexsmirnov.pbconsole.gcode.GCode
 import scala.concurrent.Future
 
 object Printer {
-  case class Positioning(absolute: Boolean = true, extruderAbsolute: Boolean = true)
+  case class Positioning(absolute: Boolean = true, extruderAbsolute: Boolean = true,tool: Int = 0)
   type GCodeProducer = Positioning => Iterator[GCode]
 }
 

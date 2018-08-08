@@ -79,7 +79,7 @@ class PrinterImpl(port: Port, responseParser: String => Response, queueSize: Int
   val linemode = new Processor[Request, Request] with PublisherBase[Request] with SubscriberBase[Request] {
     def clearStack() { this.synchronized(commandsStack = Queue.empty) }
     def onStart() {
-      positioning = Printer.Positioning(true, true)
+      positioning = Printer.Positioning(true, true,0)
       clearStack()
       request(queueSize)
     }
@@ -130,10 +130,11 @@ class PrinterImpl(port: Port, responseParser: String => Response, queueSize: Int
   @volatile
   var positioning: Printer.Positioning = Printer.Positioning(true, true)
   private def setPositioning(gcode: GCode) = gcode match {
-    case GCode.GCommand(90, _, _) => positioning = Printer.Positioning(true, true)
-    case GCode.GCommand(91, _, _) => positioning = Printer.Positioning(false, false)
+    case GCode.GCommand(90, _, _) => positioning = positioning.copy(extruderAbsolute = true, absolute =true)
+    case GCode.GCommand(91, _, _) => positioning = positioning.copy(extruderAbsolute = false, absolute =false)
     case GCode.MCommand(82, _, _) => positioning = positioning.copy(extruderAbsolute = true)
     case GCode.MCommand(83, _, _) => positioning = positioning.copy(extruderAbsolute = false)
+    case GCode.ToolCommand(n) => positioning = positioning.copy(tool = n)
     case _ => ()
   }
   val dataLine = data.map { case (gc, src) => singleCommand(gc, src) }.

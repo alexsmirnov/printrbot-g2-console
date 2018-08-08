@@ -13,10 +13,17 @@ object SmoothieResponse {
   val HALTED_RESPONSE = """^!!""".r
   val ERROR_RESPONSE = """^[eE]rror\s?(.*)$""".r
   val extruderTempResponse = """.*T:\s*(\d+\.?\d*)\s+/(\d+\.?\d*)\s+@(\d+).*""".r
+  val extruderNTempResponse = """.*T(\d):\s*(\d+\.?\d*)\s+/(\d+\.?\d*)\s+@(\d+).*""".r
   val bedTempResponse = """.*B:\s*(\d+\.?\d*)\s+/(\d+\.?\d*)\s+@(\d+).*""".r
   val positionResponse = """C:\s*X(\d+\.?\d*)\s*Y(\d+\.?\d*)\s*Z(\d+\.?\d*).*""".r
   val extruderResponse = """.*E(\d+\.?\d*)""".r
   val valueMatchers: List[PartialFunction[String, Seq[ResponseValue]]] = List(
+    {
+      case extruderNTempResponse(int(tool),float(current), float(target), int(output)) => List(
+        ExtruderTemp(current,tool),
+        ExtruderTarget(target,tool),
+        ExtruderOutput(output,tool))
+    },
     {
       case extruderTempResponse(float(current), float(target), int(output)) => List(
         ExtruderTemp(current),

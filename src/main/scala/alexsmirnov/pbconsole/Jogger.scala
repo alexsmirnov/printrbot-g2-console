@@ -31,9 +31,9 @@ class Jogger(printer: PrinterModel, settings: Settings) {
     if (pos.absolute) Iterator(GCode.G91, command, GCode.G90) else Iterator.single(command)
   }, CommandSource.Monitor)
 
-  def moveExtruder(tool: String, distance: Double, speed: Double) = printer.offer({ pos =>
-    val cmd = GCode.parse(s"G0 ${tool}${distance} F${speed}")
-    if (pos.extruderAbsolute) Iterator(GCode.M83, cmd, GCode.M82) else Iterator.single(cmd)
+  def moveExtruder(tool: Int, distance: Double, speed: Double) = printer.offer({ pos =>
+    val cmd = List(GCode.ToolCommand(tool.toInt),GCode.parse(s"G1 E${distance} F${speed}"),GCode.ToolCommand(pos.tool))
+    if (pos.extruderAbsolute) (GCode.M83 :: (cmd :+ GCode.M82)).iterator else cmd.iterator
   }, CommandSource.Monitor)
 
   val ssize = 2
@@ -44,7 +44,7 @@ class Jogger(printer: PrinterModel, settings: Settings) {
     joggerScheduler.foreach(_.cancel)
     if (armed) {
       def task = dir match {
-        case JoggerControl.EMinus | JoggerControl.EPlus => Task[Boolean](moveExtruder(dir.axis, settings.jogEstep.toDouble * dir.sign, settings.jogEspeed.toDouble))
+        case es:JoggerControl.EStep => Task[Boolean](moveExtruder(es.tool, settings.jogEstep.toDouble * dir.sign, settings.jogEspeed.toDouble))
         case JoggerControl.ZMinus | JoggerControl.ZPlus => Task[Boolean](move(dir.axis, settings.jogZstep.toDouble * dir.sign, settings.jogZspeed.toDouble))
         case _ => Task[Boolean](move(dir.axis, settings.jogXYstep.toDouble * dir.sign, settings.jogXYspeed.toDouble))
       }
@@ -84,25 +84,28 @@ class Jogger(printer: PrinterModel, settings: Settings) {
     }.delegate
   }
   val extruderArrowBtn ="extruder" ::JoggerControl.ArrowBtn
-  val node: Node = new BorderPane {
-    id = "jogger"
-    padding = Insets(10)
-    center = xyJogger
-    right = new VBox {
+  def extruderJogger(tool: Int) = new VBox {
       spacing = 5
       padding = Insets(5)
       alignment = Pos.Center
       children = List(
-        new ArrowButton("-E", JoggerControl.arrowDim, ArrowButton.Up) {
+        new ArrowButton("-E"+tool, JoggerControl.arrowDim, ArrowButton.Up) {
           disable <== printer.connected.not()
           styleClass ++= extruderArrowBtn
-          armed.onChange(joggerButtonArmed(JoggerControl.EMinus, armed()))
+          armed.onChange(joggerButtonArmed(JoggerControl.EMinus(tool), armed()))
         },
-        new ArrowButton("+E", JoggerControl.arrowDim, ArrowButton.Down) {
+        new ArrowButton("+E"+tool, JoggerControl.arrowDim, ArrowButton.Down) {
           disable <== printer.connected.not()
           styleClass ++= extruderArrowBtn
-          armed.onChange(joggerButtonArmed(JoggerControl.EPlus, armed()))
+          armed.onChange(joggerButtonArmed(JoggerControl.EPlus(tool), armed()))
         })
+    }
+  val node: Node = new BorderPane {
+    id = "jogger"
+    padding = Insets(10)
+    center = xyJogger
+    right = new HBox {
+      children = printer.extruders.zipWithIndex.map{ hi => extruderJogger(hi._2)}
     }
     bottom = macros
   }

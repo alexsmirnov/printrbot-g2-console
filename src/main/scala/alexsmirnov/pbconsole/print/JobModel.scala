@@ -76,9 +76,12 @@ class JobModel(printer: PrinterModel, settings: Settings) {
     override def createTask() = new JTask[PrintStats] { task =>
       // Check if print job is not cancelled
       def isActive(): Boolean = !(jobCancelled || task.isCancelled())
+      // For safe printing, job initialization code should set tool as the first command
+      var tool = 0
       def print(cmd: GCode) {
         if (isActive()) {
           cmd match {
+            case tc@ToolCommand(n) => tool = n; printer.print(tc)
             // M0 pause command
             case MCommand(0,_,_) => 
                       runInFxThread({pause();JobModel.pauseNotification.play()})
@@ -86,7 +89,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
             // wait for extruder temperature in loop, to allow monitoring and cancel
             case ExtTempAndWaitCommand(t) =>
               printer.print(ExtTempCommand(t))
-              while (printer.extruder.temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
+              while (printer.extruders(tool).temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
             // wait for bed temperature in loop, to allow monitoring and cancel
             case BedTempAndWaitCommand(t) =>
               printer.print(BedTempCommand(t))
@@ -125,7 +128,7 @@ class JobModel(printer: PrinterModel, settings: Settings) {
                 // pause print
                 if (paused) {
                   LOG.info(s"Print job paused")
-                  val eTemp = printer.extruder.target
+                  val eTemp = printer.extruders.head.target
                   val curX = currentStat.currentPosition.x.getOrElse(0)
                   val curY = currentStat.currentPosition.y.getOrElse(0)
                   val curZ = currentStat.currentPosition.z.getOrElse(0)
