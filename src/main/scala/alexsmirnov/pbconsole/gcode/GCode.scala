@@ -10,7 +10,9 @@ object GCode {
   val G1Cmd = """^\s*G1(\D.*)""".r
   val G92Cmd = """^\s*G92(\D.*)""".r
   val M104Cmd = """^\s*M104\s*S(\d+\.?\d*).*""".r
+  val M104ToolCmd = """^\s*M104\s*S(\d+\.?\d*)\s*T(\d+).*""".r
   val M109Cmd = """^\s*M109\s*S(\d+\.?\d*).*""".r
+  val M109ToolCmd = """^\s*M109\s*S(\d+\.?\d*)\s*T(\d+).*""".r
   val M140Cmd = """^\s*M140\s*S(\d+\.?\d*).*""".r
   val M190Cmd = """^\s*M190\s*S(\d+\.?\d*).*""".r
   val GCmd = """^G(\d+)\s*(.*)""".r
@@ -18,6 +20,7 @@ object GCode {
   val MoveParams = """\s*([XYZABEF])(\d+\.?\d*)""".r
   val NoComment = """^\s*([^;]+)\s*;?.*$""".r
   val Tool = """^(.*)T(\d+)(.*)$""".r
+  val ToolCmd = """^\s*T(\d+).*""".r
   val Empty = """^(\s*)$""".r
 
   def dist(from: Option[Float], to: Option[Float]): Float = from.flatMap { f => to.map(_ - f) }.getOrElse(0.0f)
@@ -75,10 +78,10 @@ object GCode {
   case class BedTempAndWaitCommand(t: Float) extends Command {
     val line = s"M190 S$t"
   }
-  case class ExtTempCommand(t: Float) extends Command {
+  case class ExtTempCommand(t: Float,tool: Option[Int] = None) extends Command {
     val line = s"M104 S$t"
   }
-  case class ExtTempAndWaitCommand(t: Float) extends Command {
+  case class ExtTempAndWaitCommand(t: Float,tool: Option[Int] = None) extends Command {
     val line = s"M109 S$t"
   }
 
@@ -110,6 +113,10 @@ object GCode {
   def apply(line: String): List[GCode] = {
     val strip = stripComment(line)
     strip match {
+      // Special case from Slic3r and cura : tool parameter for extruder temp command
+      case M109ToolCmd(temp,tool) => List(ExtTempAndWaitCommand(temp.toFloat,Some(tool.toInt)))
+      case M104ToolCmd(temp,tool) => List(ExtTempCommand(temp.toFloat,Some(tool.toInt)))
+      // separate tool command from rest of line
       case Tool(a,n,b) => List(ToolCommand(n.toInt), parse(a+b))
       case _ => List(parse(strip))
     }
@@ -126,6 +133,7 @@ object GCode {
       case M190Cmd(temp) => BedTempAndWaitCommand(temp.toFloat)
       case GCmd(n, params) => GCommand(n.toInt, params, strip)
       case MCmd(n, params) => MCommand(n.toInt, params, strip)
+      case ToolCmd(n) => ToolCommand(n.toInt)
       case other => UnknownCommand(other)
     }
   }

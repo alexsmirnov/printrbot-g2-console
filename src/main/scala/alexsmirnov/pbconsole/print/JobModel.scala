@@ -86,10 +86,19 @@ class JobModel(printer: PrinterModel, settings: Settings) {
             case MCommand(0,_,_) => 
                       runInFxThread({pause();JobModel.pauseNotification.play()})
                       paused = true
-            // wait for extruder temperature in loop, to allow monitoring and cancel
-            case ExtTempAndWaitCommand(t) =>
+            case ExtTempCommand(t,cmdTool) =>
+              // HACK - convert slic3r and cura tool parameter to command sequence
+              // Smothie does not recognize commands like M104S200T1
+              cmdTool.foreach { tt => printer.print(ToolCommand(tt))}
               printer.print(ExtTempCommand(t))
-              while (printer.extruders(tool).temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
+              cmdTool.foreach{ _ => printer.print(ToolCommand(tool))}
+            // wait for extruder temperature in loop, to allow monitoring and cancel
+            case ExtTempAndWaitCommand(t,cmdTool) =>
+              // HACK - convert slic3r and cura tool parameter to command sequence
+              cmdTool.foreach{ tt => printer.print(ToolCommand(tt))}
+              printer.print(ExtTempCommand(t))
+              cmdTool.foreach{ _ => printer.print(ToolCommand(tool))}
+              while (printer.extruders(cmdTool.getOrElse(tool)).temperature() < (t - 1.0) && isActive()) Thread.sleep(500)
             // wait for bed temperature in loop, to allow monitoring and cancel
             case BedTempAndWaitCommand(t) =>
               printer.print(BedTempCommand(t))

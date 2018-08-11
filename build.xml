@@ -21,7 +21,7 @@
       mainclassname="alexsmirnov.pbconsole.ConsoleApp"
       copyright="2018 Alexander Smirnov"
       applicationCategory="public.app-category.utils">
-      <classpath file="target/scala-2.11/pbconsole.jar"/>
+      <classpath file="target/scala-2.12/pbconsole.jar"/>
   </bundleapp>
 </target>
 

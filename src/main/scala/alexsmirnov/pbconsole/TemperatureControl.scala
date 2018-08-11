@@ -38,8 +38,9 @@ import alexsmirnov.pbconsole.gcode.GCode
 class TemperatureControl(printer: PrinterModel) {
   type DT = javafx.scene.chart.XYChart.Data[Number, Number]
   type ST = javafx.scene.chart.XYChart.Series[Number, Number]
-  val xAxis = NumberAxis("Seconds", 0, 180, 10)
-  xAxis.tickLabelsVisible = false
+  val CHART_PERIOD = 180
+  val xAxis = NumberAxis("Seconds", 0, CHART_PERIOD, 20)
+  xAxis.tickLabelsVisible = true
   xAxis.forceZeroInRange = false
   val yAxis = NumberAxis("Temperature", 0, 300, 25)
 
@@ -56,8 +57,8 @@ class TemperatureControl(printer: PrinterModel) {
   }
   val bedTempData = ObservableBuffer.empty[DT]
   val bedTargetData = ObservableBuffer.empty[DT]
-  val extruderTempData = ObservableBuffer.empty[DT]
-  val extruderTargetData = ObservableBuffer.empty[DT]
+  val extruderTempData = Vector.fill(printer.extruders.size)(ObservableBuffer.empty[DT])
+  val extruderTargetData = Vector.fill(printer.extruders.size)(ObservableBuffer.empty[DT])
 
   def series(name: String, data: ObservableBuffer[DT]) = {
     val s = XYChart.Series[Number, Number](name, data)
@@ -65,13 +66,13 @@ class TemperatureControl(printer: PrinterModel) {
   }
 
   val allDataSeries = ObservableBuffer[ST](
-    series("Extruder", extruderTempData),
-    series("Extruder target", extruderTargetData),
     series("Bed", bedTempData),
     series("Bed target", bedTargetData))
+  allDataSeries ++= extruderTempData.zipWithIndex.map{ case (data,n) => series("Extruder "+n, data)}
+  allDataSeries ++= extruderTargetData.zipWithIndex.map{ case (data,n) => series(s"Extruder $n target", data)}
 
   val scheduler = {
-    val s = ScheduledService(Task { if (printer.connected()) Await.result(printer.query(GCode.M105, CommandSource.Monitor), 5.seconds) else Nil })
+    val s = ScheduledService(Task { if (printer.connected()) Await.result(printer.query(GCode.M105, CommandSource.Monitor), 10.seconds) else Nil })
     s.period = FXDuration(2000.0)
     s.delay = FXDuration(2000.0)
     s.restartOnFailure = true
@@ -79,14 +80,14 @@ class TemperatureControl(printer: PrinterModel) {
       val lv = s.lastValue()
       if (ev.eventType == WorkerStateEvent.WorkerStateSucceeded && null != lv) {
         val ticks = time()
-        xAxis.lowerBound = ticks - 180.0
+        xAxis.lowerBound = ticks - CHART_PERIOD
         xAxis.upperBound = ticks
-        allDataSeries.foreach { ds => removeOlderThan(ticks, ds.data()) }
+        allDataSeries.foreach { ds => removeOlderThan(ticks - CHART_PERIOD, ds.data()) }
         lv.foreach {
           case ExtruderTemp(t,tool)  if printer.extruders.isDefinedAt(tool) =>
-            extruderTempData += toChartData(ticks, t); printer.extruders(tool).temperature.update(t)
+            extruderTempData(tool) += toChartData(ticks, t); printer.extruders(tool).temperature.update(t)
           case ExtruderTarget(t,tool) if printer.extruders.isDefinedAt(tool) =>
-            extruderTargetData += toChartData(ticks, t); printer.extruders(tool).target.update(t)
+            extruderTargetData(tool) += toChartData(ticks, t); printer.extruders(tool).target.update(t)
           case ExtruderOutput(n,tool)  if printer.extruders.isDefinedAt(tool) => printer.extruders(tool).output.update(n)
           case BedTemp(t) =>
             bedTempData += toChartData(ticks, t); printer.bed.temperature.update(t)
