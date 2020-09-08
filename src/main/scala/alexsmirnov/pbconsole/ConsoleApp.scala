@@ -53,7 +53,7 @@ import alexsmirnov.pbconsole.serial.Port
 import scalafx.application.Platform
 import scalafx.scene.control.Accordion
 import scalafx.scene.control.TitledPane
-import alexsmirnov.pbconsole.print.Job
+import alexsmirnov.pbconsole.print.JobControl
 import alexsmirnov.pbconsole.print.JobModel
 import alexsmirnov.pbconsole.octoprint.ApiServer
 import alexsmirnov.pbconsole.serial.PrinterImpl
@@ -71,15 +71,16 @@ object ConsoleApp extends JFXApp {
 
   val settings = Settings("/alexsmirnov/pbconsole")
 
-  val printer = PrinterImpl(parameters.named)
+  val printer = PrinterImpl(parameters.named,settings.portSpeed())
 
   val printerModel = new PrinterModel(printer,2)
 
   val jobModel = new JobModel(printerModel, settings)
   val console = new Console(printerModel, settings)
-  val printerControl = new PrinterControl(printerModel, jobModel, settings)
+  val printerControl = new PrinterControl(printerModel, settings)
+  val jobControl = new JobControl(jobModel,settings)
   val preferences = new Prefs(settings)
-  
+
   val css = this.getClass.getResource("/console.css")
 
   val _scene = new Scene {
@@ -90,7 +91,7 @@ object ConsoleApp extends JFXApp {
         bottom = status
       }
     }
-  
+
   stage = new PrimaryStage {
     width = 1000
     height = 700
@@ -122,6 +123,10 @@ object ConsoleApp extends JFXApp {
         new Tab {
           text = "Printer control"
           content = printerControl.node
+        },
+        new Tab {
+          text = "Print job"
+          content = jobControl.node
         },
         new Tab {
           hgrow = Priority.Always

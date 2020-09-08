@@ -68,6 +68,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port with Publis
         listeners.foreach { _(event) }
         val buffSize = sr.getSerialPortInstance.getOutputBufferSize
         request(if (buffSize > 0) buffSize else 1024)
+        Thread.sleep(100)
         val inThread = startReceiver(sr)
         connection = Some((sr, inThread))
       } else {
@@ -89,7 +90,13 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port with Publis
           sendComplete()
           cancel()
           listeners.foreach { _(Disconnected) }
-          p.disconnect()
+          if(p.isConnected) {
+            try {
+              p.disconnect()
+            } catch {
+              case ex: Exception => LOG.warn(s"Exception in disconnect ${ex}")
+            }
+          }
           if (reconnect) waitForConnect
       }
     }

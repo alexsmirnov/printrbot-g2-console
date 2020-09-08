@@ -40,7 +40,7 @@ class TemperatureControl(printer: PrinterModel) {
   type ST = javafx.scene.chart.XYChart.Series[Number, Number]
   val CHART_PERIOD = 180
   val xAxis = NumberAxis("Seconds", 0, CHART_PERIOD, 20)
-  xAxis.tickLabelsVisible = true
+  xAxis.tickLabelsVisible = false
   xAxis.forceZeroInRange = false
   val yAxis = NumberAxis("Temperature", 0, 300, 25)
 

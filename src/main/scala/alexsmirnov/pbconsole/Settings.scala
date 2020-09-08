@@ -2,6 +2,7 @@ package alexsmirnov.pbconsole
 
 import scalafx.beans.property.BooleanProperty
 import scalafx.beans.property.DoubleProperty
+import scalafx.beans.property.IntegerProperty
 import scalafx.collections.ObservableBuffer
 import scalafx.beans.property.StringProperty
 import java.util.prefs.Preferences
@@ -9,6 +10,7 @@ import javafx.collections.FXCollections
 import java.io.File
 
 class Settings {
+  val portSpeed = IntegerProperty(115200)
   val debugOutput = BooleanProperty(false)
   val bedWidth = DoubleProperty(110)
   val bedDepth = DoubleProperty(203)
@@ -30,6 +32,7 @@ class Settings {
 }
 
 object Settings {
+  val PSPD = "portSpeed"
   val DO = "debugOutput"
   val BED_W = "bedWidth"
   val BED_D = "bedDepth"
@@ -60,6 +63,7 @@ object Settings {
     }
     val s = new Settings
     s.debugOutput.update(node.getBoolean(DO, false))
+    s.portSpeed.update(node.getInt(PSPD,115200))
     restoreDouble(s.bedWidth,BED_W, 100)
     restoreDouble(s.bedDepth,BED_D, 203)
     restoreDouble(s.height,H, 130)
@@ -94,6 +98,9 @@ object Settings {
   private def bindString(node: Preferences,property: StringProperty,key: String) {
     property.onChange{ node.put(key, property());node.flush() }
   }
+  private def bindInteger(node: Preferences,property: IntegerProperty,key: String) {
+    property.onChange{ node.putInt(key, property());node.flush()  }
+  }
   private def bindDouble(node: Preferences,property: DoubleProperty,key: String) {
     property.onChange{ node.putDouble(key, property());node.flush()  }
   }
@@ -102,6 +109,7 @@ object Settings {
   }
   def bind(settings: Settings,path: String) {
     val node = Preferences.userRoot().node(path)
+    bindInteger(node,settings.portSpeed,PSPD)
     bindBoolean(node, settings.debugOutput, DO)
     bindDouble(node, settings.bedWidth, BED_W)
     bindDouble(node, settings.bedDepth, BED_D)

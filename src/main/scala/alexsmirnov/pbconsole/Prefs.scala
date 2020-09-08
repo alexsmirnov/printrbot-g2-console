@@ -1,7 +1,6 @@
 package alexsmirnov.pbconsole
 
 import scala.collection.JavaConverters._
-
 import scalafx.Includes._
 import scalafx.collections.ObservableBuffer
 import scalafx.event.ActionEvent
@@ -17,7 +16,7 @@ import scalafx.scene.layout.GridPane
 import scalafx.scene.layout.HBox
 import scalafx.scene.layout.Priority
 import scalafx.scene.layout.VBox
-import scalafx.beans.property.DoubleProperty
+import scalafx.beans.property.{DoubleProperty, IntegerProperty}
 import scalafx.scene.control.TextFormatter
 import scalafx.util.converter.NumberStringConverter
 import javafx.beans.property.StringProperty
@@ -40,6 +39,16 @@ class Prefs(settings: Settings) {
     grid
   }
 
+  def integerText(prop: IntegerProperty) = {
+    val formatter = new TextFormatter(new NumberStringConverter())
+    formatter.value <==> prop
+    val text = new TextField {
+      styleClass += "prefs_input"
+      textFormatter = formatter
+    }
+    text
+  }
+
   def doubleText(prop: DoubleProperty) = {
     val formatter = new TextFormatter(new NumberStringConverter())
     formatter.value <==> prop
@@ -59,6 +68,7 @@ class Prefs(settings: Settings) {
   }
 
   val props = controlGrid(
+    "Serial port speed" -> integerText(settings.portSpeed),
     "Bed width" -> doubleText(settings.bedWidth),
     "Bed depth" -> doubleText(settings.bedDepth),
     "Height" -> doubleText(settings.height),

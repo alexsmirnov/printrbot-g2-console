@@ -22,11 +22,11 @@ import scala.concurrent.Promise
  *
  */
 object PrinterImpl {
-  def apply(args: Map[String, String]) = {
+  def apply(args: Map[String, String],speed: Int) = {
     val port = args.get("port") match {
       case Some("stub") => new PortStub()
-      case Some(portname) => Port(portname.r)
-      case None => Port("/dev/tty\\.usbmodem.*".r)
+      case Some(portname) => Port(portname.r,speed)
+      case None => Port("/dev/tty\\.usbmodem.*".r,speed)
     }
     new PrinterImpl(port, SmoothieResponse(_))
   }

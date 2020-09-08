@@ -117,6 +117,7 @@ object GCode {
       case M109ToolCmd(temp,tool) => List(ExtTempAndWaitCommand(temp.toFloat,Some(tool.toInt)))
       case M104ToolCmd(temp,tool) => List(ExtTempCommand(temp.toFloat,Some(tool.toInt)))
       // separate tool command from rest of line
+      case ToolCmd(n) => List(ToolCommand(n.toInt))
       case Tool(a,n,b) => List(ToolCommand(n.toInt), parse(a+b))
       case _ => List(parse(strip))
     }

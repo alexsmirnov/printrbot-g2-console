@@ -40,7 +40,7 @@ import scalafx.util.converter.FloatStringConverter
 import scalafx.scene.control.SelectionModel
 import scalafx.scene.control.SelectionMode
 
-object Job {
+object JobControl {
   val LOG = LoggerFactory.getLogger("alexsmirnov.pbconsole.print.Job")
 
   val openGcodeDialog = new FileChooser {
@@ -52,7 +52,7 @@ object Job {
 
 }
 
-class Job(job: JobModel, settings: Settings) {
+class JobControl(job: JobModel, settings: Settings) {
 
   val stats = {
     val grid = new GridPane {
@@ -127,7 +127,7 @@ class Job(job: JobModel, settings: Settings) {
   }
 
   val node: Node = new BorderPane {
-    id = "job"
+    id = "job_control"
     top = new HBox {
       id = "job_file"
       hgrow = Priority.Always
@@ -192,7 +192,7 @@ class Job(job: JobModel, settings: Settings) {
   }
 
   def selectFile() {
-    val selected = Job.openGcodeDialog.showOpenDialog(node.scene().window())
+    val selected = JobControl.openGcodeDialog.showOpenDialog(node.scene().window())
     if (null != selected) {
       job.updateFile(selected)
     }
@@ -201,7 +201,8 @@ class Job(job: JobModel, settings: Settings) {
   job.addFileListener(new JobModel.FileProcessListener {
     def callback() = {
       val gc = canvas.graphicsContext2D
-      gc.clearRect(0, 0, canvas.width(), canvas.height())
+      val height = canvas.height()
+      gc.clearRect(0, 0, canvas.width(), height)
       gc.lineWidth = 1.0
       gc.stroke = Color.Red
       var lastPos = GCode.UnknownPosition
@@ -211,11 +212,11 @@ class Job(job: JobModel, settings: Settings) {
         cmd match {
           case g1Move: GCode.G1Move if g1Move.extruder.isDefined =>
             lastXy.zip(xy).foreach {
-              case ((x0, y0), (x, y)) => gc.strokeLine(x0 * 2, y0 * 2, x * 2, y * 2)
+              case ((x0, y0), (x, y)) => gc.strokeLine(x0 * 2, height-y0 * 2, x * 2, height-y * 2)
             }
           case move: GCode.Move =>
             xy.foreach {
-              case (x, y) => gc.moveTo(x * 2, y * 2)
+              case (x, y) => gc.moveTo(x * 2, height-y * 2)
             }
           case cmd =>
         }

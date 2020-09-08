@@ -1,5 +1,6 @@
 package alexsmirnov.pbconsole
 
+import alexsmirnov.pbconsole.Console.LOG
 import scalafx.Includes._
 import scalafx.beans.binding.StringBinding
 import scalafx.beans.property.BooleanProperty
@@ -20,22 +21,22 @@ import scalafx.scene.layout.VBox
 import scalafx.scene.paint.Color
 import scalafx.scene.control.CheckBox
 import alexsmirnov.pbconsole.gcode.GCode
-import scalafx.beans.property.ObjectProperty
-import java.util.function.Predicate
 import scalafx.collections.transformation.FilteredBuffer
 import javafx.collections.FXCollections
+import org.slf4j.LoggerFactory
 
 object Console {
 
+  val LOG = LoggerFactory.getLogger("alexsmirnov.pbconsole.Console")
   sealed trait Msg {
     def msg: String
     def src: CommandSource
   }
   case class In(msg: String, src: CommandSource) extends Msg {
-    override def toString() = "< " + msg
+    override def toString() = src.abbr + "<: " + msg
   }
   case class Out(msg: String, src: CommandSource) extends Msg {
-    override def toString() = "> " + msg
+    override def toString() = src.abbr + ">: " + msg
   }
 }
 /**
@@ -94,7 +95,7 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
 
               val message = item.map[String, StringBinding] {
                 case null => null
-                case m => m.msg
+                case m => m.toString
               }
               wrapText = false
               text <== message
@@ -129,12 +130,15 @@ class Console(printer: PrinterModel, settings: Settings) { console =>
             }
           }
           def send {
-            if (!input.text().trim().isEmpty()) {
-              if (printer.offer({_ => GCode(input.text()).iterator}, CommandSource.Console)) {
-                history = input.text() :: history
+            val text = input.text()
+            if (!text.trim().isEmpty()) {
+              if (printer.offer({_ => GCode(text).iterator}, CommandSource.Console)) {
+                history = text :: history
                 currentHistory = 0
                 input.clear()
                 input.requestFocus()
+              } else {
+                LOG.info("Cannot offer command to printer")
               }
             }
           }
