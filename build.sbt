@@ -5,12 +5,12 @@ retrieveManaged := true
 version := "0.0.2"
 val ScalatraVersion = "2.5.3"
 // Version of Scala used by the project
-scalaVersion := "2.12.11"
-val javaFxVersion = "14"
+scalaVersion := "2.12.13"
+val javaFxVersion = "15.0.1"
 // dependencyOverrides += "org.scala-lang" % "scala-compiler" % scalaVersion.value
 // Add dependency on ScalaFX library
 //libraryDependencies += "org.scalafx" %% "scalafx" % "8.0.144-R12"
-libraryDependencies += "org.scalafx" %% "scalafx" % "14-R19"
+libraryDependencies += "org.scalafx" %% "scalafx" % "15.0.1-R21"
 
 // Determine OS version of JavaFX binaries
 lazy val osName = System.getProperty("os.name") match {
@@ -25,14 +25,12 @@ libraryDependencies ++= javaFXModules.map( m =>
   "org.openjfx" % s"javafx-$m" % javaFxVersion classifier osName
 )
 // https://mvnrepository.com/artifact/com.neuronrobotics/nrjavaserial
-libraryDependencies += "com.neuronrobotics" % "nrjavaserial" % "5.0.2"
+libraryDependencies += "com.neuronrobotics" % "nrjavaserial" % "5.1.1"
 // https://mvnrepository.com/artifact/org.reactivestreams/reactive-streams
-libraryDependencies += "org.reactivestreams" % "reactive-streams" % "1.0.0.final"
-libraryDependencies += "org.typelevel" %% "cats-core" % "1.0.0-MF"
-libraryDependencies ++= Seq(
-  "io.monix" %% "monix" % "2.3.2",
-  "io.monix" %% "monix-cats" % "2.3.2"
-)
+libraryDependencies += "org.reactivestreams" % "reactive-streams" % "1.0.3"
+scalacOptions += "-Ypartial-unification"
+// libraryDependencies += "org.typelevel" %% "cats-core" % "2.3.0"
+libraryDependencies += "io.monix" %% "monix" % "3.3.0"
 libraryDependencies ++= Seq(
   "org.scalatra" %% "scalatra" % ScalatraVersion,
   "org.scalatra" %% "scalatra-scalate" % ScalatraVersion,
@@ -56,6 +54,7 @@ assemblyMergeStrategy in assembly := {
   case PathList("META-INF", "ECLIPSEF.RSA", xs @ _*)         => MergeStrategy.discard
   case PathList("META-INF", "mailcap", xs @ _*)         => MergeStrategy.discard
   case PathList("org", "apache","commons", xs @ _*) => MergeStrategy.first
+  case PathList("scala", "annotation", xs @ _*) => MergeStrategy.first
   case PathList("module-info.java") => MergeStrategy.discard
   case PathList("module-info.class") => MergeStrategy.discard
   case PathList(ps @ _*) if ps.last == "Driver.properties" => MergeStrategy.first

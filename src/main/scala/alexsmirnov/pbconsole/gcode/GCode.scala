@@ -78,11 +78,14 @@ object GCode {
   case class BedTempAndWaitCommand(t: Float) extends Command {
     val line = s"M190 S$t"
   }
+
+  def toolParam(t: Option[Int]):String = {t.map({ n:Int => s" T$n"}).getOrElse("");}
+
   case class ExtTempCommand(t: Float,tool: Option[Int] = None) extends Command {
-    val line = s"M104 S$t"
+    val line = s"M104 S$t${toolParam(tool)}"
   }
   case class ExtTempAndWaitCommand(t: Float,tool: Option[Int] = None) extends Command {
-    val line = s"M109 S$t"
+    val line = s"M109 S$t${toolParam(tool)}"
   }
 
   case class GCommand(n: Int, params: String, line: String) extends Command
@@ -116,9 +119,9 @@ object GCode {
       // Special case from Slic3r and cura : tool parameter for extruder temp command
       case M109ToolCmd(temp,tool) => List(ExtTempAndWaitCommand(temp.toFloat,Some(tool.toInt)))
       case M104ToolCmd(temp,tool) => List(ExtTempCommand(temp.toFloat,Some(tool.toInt)))
-      // separate tool command from rest of line
+      // separate tool command from rest of line. needed for smootieware only
       case ToolCmd(n) => List(ToolCommand(n.toInt))
-      case Tool(a,n,b) => List(ToolCommand(n.toInt), parse(a+b))
+      //case Tool(a,n,b) => List(ToolCommand(n.toInt), parse(a+b))
       case _ => List(parse(strip))
     }
   }

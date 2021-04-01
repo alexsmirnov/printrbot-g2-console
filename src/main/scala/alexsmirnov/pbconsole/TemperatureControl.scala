@@ -157,7 +157,7 @@ class TemperatureControl(printer: PrinterModel) {
       (printer.extruders.zipWithIndex.map { 
          case (extruder,n) => tempControl("Extruder "+n, extruder, { t => 
            { pos => {
-             Iterator(GCode.ToolCommand(n), GCode.ExtTempCommand(t),GCode.ToolCommand(pos.tool)) 
+             Iterator.single(GCode.ExtTempCommand(t,Some(n)))
              }
            }
          }) 
