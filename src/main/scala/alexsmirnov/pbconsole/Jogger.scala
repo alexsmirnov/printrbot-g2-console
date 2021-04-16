@@ -68,10 +68,6 @@ class Jogger(printer: PrinterModel, settings: Settings) {
   //    "G0X50Y100Z40F5000"))
   val macros = new FlowPane {
     id = "macros"
-    padding = Insets(10)
-    hgap = 10
-    vgap = 10
-    alignment = Pos.TopLeft
   }
 
   settings.macros.bindMap(macros.children) { m =>
@@ -102,7 +98,6 @@ class Jogger(printer: PrinterModel, settings: Settings) {
     }
   val node: Node = new BorderPane {
     id = "jogger"
-    padding = Insets(10)
     center = xyJogger
     right = new HBox {
       children = printer.extruders.zipWithIndex.map{ hi => extruderJogger(hi._2)}

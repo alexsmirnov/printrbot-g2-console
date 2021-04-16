@@ -84,7 +84,7 @@ object ConsoleApp extends JFXApp {
   val css = this.getClass.getResource("/console.css")
 
   val _scene = new Scene {
-      stylesheets += css.toExternalForm
+      stylesheets = List(css.toExternalForm)
       root = new BorderPane {
         top = toolbar
         center = tabs

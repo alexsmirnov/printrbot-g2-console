@@ -44,7 +44,7 @@ class NRJavaSerialPort(port: Regex, baud: Int = 115200) extends Port with Publis
         val ports = NRSerialPort.getAvailableSerialPorts.iterator()
         while (ports.hasNext() && activePort.isEmpty) {
           val portName = ports.next
-          LOG.info(s"find serial port $portName")
+          LOG.trace(s"find serial port $portName")
           if (port.findFirstIn(portName).isDefined) {
             LOG.info(s"Port $portName matches expected $port")
             activePort = Some(portName)

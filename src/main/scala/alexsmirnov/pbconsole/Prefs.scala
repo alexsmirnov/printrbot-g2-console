@@ -6,18 +6,12 @@ import scalafx.collections.ObservableBuffer
 import scalafx.event.ActionEvent
 import scalafx.geometry.Insets
 import scalafx.scene.Node
-import scalafx.scene.control.Accordion
-import scalafx.scene.control.Button
-import scalafx.scene.control.Label
-import scalafx.scene.control.TextArea
-import scalafx.scene.control.TextField
-import scalafx.scene.control.TitledPane
+import scalafx.scene.control.{Accordion, Button, ContentDisplay, Label, TextArea, TextField, TextFormatter, TitledPane}
 import scalafx.scene.layout.GridPane
 import scalafx.scene.layout.HBox
 import scalafx.scene.layout.Priority
 import scalafx.scene.layout.VBox
 import scalafx.beans.property.{DoubleProperty, IntegerProperty}
-import scalafx.scene.control.TextFormatter
 import scalafx.util.converter.NumberStringConverter
 import javafx.beans.property.StringProperty
 
@@ -26,7 +20,6 @@ class Prefs(settings: Settings) {
   def controlGrid(rows: (String, Node)*): Node = {
     val grid = new GridPane {
       styleClass += "prefs"
-      padding = Insets(18)
       gridLinesVisible = true
     }
     rows.zipWithIndex.foreach {
@@ -91,11 +84,14 @@ class Prefs(settings: Settings) {
     new TitledPane {
       styleClass += "prefs_macro"
       text <== m.nameProperty
-      graphic = new Button {
+      private val delButton: Button = new Button {
         styleClass += "prefs_remove_macro"
         text = "Remove"
         onAction = { ae: ActionEvent => settings.macros.remove(m) }
       }
+      graphic = delButton
+      contentDisplay = ContentDisplay.Right
+      graphicTextGap <= delButton.layoutBounds.map(b => b.getWidth)
       content = controlGrid(
         "Name" -> textField(m.nameProperty),
         "Description" -> textField(m.descriptionProperty),

@@ -1,4 +1,78 @@
-#root {
+.root {
  /*   -fx-background-color: #333333; */
-    -fx-padding: 5px;
+    /* -fx-padding: 5px; */
+    -fx-font-size: 14px;
+    -fx-font-family: sans-serif;
+}
+
+#status {
+    -fx-background-color: gainsboro;
+    -fx-padding: 7px;
+}
+
+#temperature {
+  -fx-padding: 15px;
+  -fx-spacing: 10px;
+  -fx-alignment: top-center;
+}
+
+.temperature {
+  -fx-padding: 5px 5px 0px 25px;
+  -fx-alignment: center;
+  -fx-column-halignment: center;
+  /*-fx-border-width: 2px;
+  -fx-border-style: solid;*/
+  -fx-min-width: 350px;
+}
+
+.temperature_label {
+  -fx-padding: 5px 5px 5px 0;
+  -fx-pref-width: 600px;
+}
+
+#jogger {
+  -fx-padding: 15px;
+  -fx-spacing: 10px;
+  -fx-alignment: top-center;
+}
+
+#macros {
+  -fx-padding: 5px;
+  -fx-spacing: 5px;
+  -fx-hgap: 10px;
+  -fx-vgap: 10px;
+  -fx-alignment: top-center;
+}
+
+#job_control {
+  -fx-padding: 15px;
+}
+#job_image {
+  -fx-padding: 5px;
+}
+
+#job_stats {
+  -fx-spacing: 10px;
+  -fx-alignment: top-center;
+}
+#stopAtZ {
+  -fx-spacing: 10px;
+  -fx-alignment: top-center;
+}
+#prefs {
+  -fx-spacing: 10px;
+  -fx-alignment: top-center;
+  -fx-padding: 5px;
+}
+#prefs_props .prefs_label {
+  -fx-min-width: 150px;
+}
+.macro_props .prefs_label {
+  -fx-min-width: 80px;
+}
+.prefs_remove_macro {
+  -fx-alignment: top-right;
+}
+.prefs_macro {
+  -fx-graphic-text-gap	200px;
 }

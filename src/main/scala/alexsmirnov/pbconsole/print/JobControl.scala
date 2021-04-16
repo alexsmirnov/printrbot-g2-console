@@ -57,7 +57,6 @@ class JobControl(job: JobModel, settings: Settings) {
   val stats = {
     val grid = new GridPane {
       id = "job_stats"
-      padding = Insets(18)
       gridLinesVisible = true
     }
     grid.addRow(0, new Separator(), statLabel("Size"), statLabel("Min"), statLabel("Max"))
@@ -77,7 +76,6 @@ class JobControl(job: JobModel, settings: Settings) {
 
   val bedImage = new StackPane {
     id = "job_image"
-    padding = Insets(10)
     children = List(
       new Rectangle {
         id = "job_image_backgroud"
@@ -91,7 +89,6 @@ class JobControl(job: JobModel, settings: Settings) {
 
     val grid = new GridPane {
       id = "job_status"
-      padding = Insets(18)
       gridLinesVisible = true
       visible <== job.jobActive
     }
@@ -158,7 +155,9 @@ class JobControl(job: JobModel, settings: Settings) {
         },
         new Separator())
     }
-    right = new VBox(stats, stopAtZlevels, printStatus)
+    right = new VBox(stats, stopAtZlevels, printStatus) {
+      id = "job_stats"
+    }
     center = bedImage
     bottom = new HBox {
       id = "job_progress"
