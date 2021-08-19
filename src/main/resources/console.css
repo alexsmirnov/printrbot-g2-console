@@ -74,5 +74,5 @@
   -fx-alignment: top-right;
 }
 .prefs_macro {
-  -fx-graphic-text-gap	200px;
+  -fx-graphic-text-gap:	200px;
 }

@@ -25,7 +25,7 @@ libraryDependencies ++= javaFXModules.map( m =>
   "org.openjfx" % s"javafx-$m" % javaFxVersion classifier osName
 )
 // https://mvnrepository.com/artifact/com.neuronrobotics/nrjavaserial
-libraryDependencies += "com.neuronrobotics" % "nrjavaserial" % "5.1.1"
+libraryDependencies += "com.neuronrobotics" % "nrjavaserial" % "5.2.1"
 // https://mvnrepository.com/artifact/org.reactivestreams/reactive-streams
 libraryDependencies += "org.reactivestreams" % "reactive-streams" % "1.0.3"
 scalacOptions += "-Ypartial-unification"
