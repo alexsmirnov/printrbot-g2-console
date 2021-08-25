@@ -76,4 +76,4 @@ assembly / assemblyExcludedJars := {
       }
 }
 assembly / mainClass := Some("alexsmirnov.pbconsole.ConsoleApp")
-test in assembly := {}
+assembly / test := {}
