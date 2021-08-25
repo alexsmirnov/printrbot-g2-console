@@ -49,8 +49,8 @@ scalacOptions ++= Seq("-unchecked", "-deprecation", "-Xcheckinit", "-encoding", 
 // Fork a new JVM for 'run' and 'test:run', to avoid JavaFX double initialization problems
 fork := true
 
-assemblyJarName in assembly := "pbconsole.jar"
-assemblyMergeStrategy in assembly := {
+assembly / assemblyJarName  := "pbconsole.jar"
+assembly / assemblyMergeStrategy := {
   case PathList("META-INF", "ECLIPSEF.RSA", xs @ _*)         => MergeStrategy.discard
   case PathList("META-INF", "mailcap", xs @ _*)         => MergeStrategy.discard
   case PathList("org", "apache","commons", xs @ _*) => MergeStrategy.first
@@ -61,12 +61,12 @@ assemblyMergeStrategy in assembly := {
   case PathList(ps @ _*) if ps.last == "plugin.properties" => MergeStrategy.discard
   case PathList(ps @ _*) if ps.last == "log4j.properties" => MergeStrategy.first
   case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    val oldStrategy = (assembly / assemblyMergeStrategy ).value
     oldStrategy(x)
 }
-assemblyOption in assembly := (assemblyOption in assembly).value.copy(includeScala = true, includeDependency = true)
-assemblyExcludedJars in assembly := {
-  val cp = (fullClasspath in assembly).value
+assembly / assemblyOption := (assembly / assemblyOption ).value.copy(includeScala = true, includeDependency = true)
+assembly / assemblyExcludedJars := {
+  val cp = (assembly / fullClasspath ).value
   cp filter {
       j => j.data.getName.startsWith("scalap-2") || 
       ( j.data.getName.startsWith("scala-") && 
@@ -75,5 +75,5 @@ assemblyExcludedJars in assembly := {
         !j.data.getName.startsWith("scala-reflect") )
       }
 }
-mainClass in assembly := Some("alexsmirnov.pbconsole.ConsoleApp")
+assembly / mainClass := Some("alexsmirnov.pbconsole.ConsoleApp")
 test in assembly := {}
