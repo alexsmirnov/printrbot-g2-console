@@ -11,8 +11,9 @@ class PrinterControl(printer: PrinterModel,  settings: Settings) {
   
   val temperature = new TemperatureControl(printer)
   val jogger = new Jogger(printer,settings)
+  val zOffset = new ZOffsetControl(printer,settings)
   val node: Node = new HBox {
     id = "printer_control"
-    children = List(jogger.node, temperature.node)
+    children = List(jogger.node, zOffset.node, temperature.node)
   }
 }

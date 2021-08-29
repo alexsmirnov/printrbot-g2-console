@@ -44,6 +44,17 @@
   -fx-alignment: top-center;
 }
 
+#zOffset {
+  -fx-padding: 10px;
+  -fx-spacing: 15px;
+  -fx-alignment: center;
+  -fx-pref-width: 100px;
+  -fx-min-width: 80px;
+}
+
+#zSlider {
+  -fx-pref-height: 400px;
+}
 #job_control {
   -fx-padding: 15px;
 }
