@@ -73,6 +73,7 @@ object ArrowButton {
     }
     def width(dim: Dimensions) = dim.headWidth
     def height(dim: Dimensions) = dim.headLength+dim.shaftLength
+
   }
 
   def arrowShape(headWidth: Double, headLength: Double, shaftWidth: Double, shaftLength: Double): Shape = {
