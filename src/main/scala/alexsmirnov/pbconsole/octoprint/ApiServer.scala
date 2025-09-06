@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory
 class ApiServer(printer: PrinterModel, job: JobModel, config: Settings)  {
   val LOG = LoggerFactory.getLogger(this.getClass.getCanonicalName)
 
-    val server = new Server(5000)
+    val server = new Server(5100)
     val context = new WebAppContext()
     context setContextPath "/"
     context.setResourceBase("src/main/webapp")
